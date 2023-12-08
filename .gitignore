@@ -1,0 +1,25 @@
+# IDE / temporary files
+*~
+.idea
+.vscode
+
+# Python byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Node dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# vuepress v2.x temp and cache directory
+.temp
+.cache
