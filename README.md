@@ -22,15 +22,12 @@ Functional utilities of **School Pilot** include:
 * MongoDB / Redis / SQLite / MySQL.
 
 ## Maintainers
-The maintainers of this repository are
-[Wonderful Adeyemo](https://github.com/Dev-wonderful),
-[Donald Ajaps](https://github.com/adobki), 
-[Chukwuebuka Onwuka](https://github.com/Nathan-88), and  [Abdulwasiu Yusuf](isola.remilekun@gmail.com).
+The maintainers of this repository are [Wonderful Adeyemo](https://github.com/Dev-wonderful), [Donald Ajaps](https://github.com/adobki), [Chukwuebuka Onwuka](https://github.com/Nathan-88), and  [Abdulwasiu Yusuf](https://github.com/Yusuf-R).
 
-Additional info is available [here](../../graphs/contributors).
+Additional information is available [here](../../graphs/contributors).
 
 ## Contributing
-We value feedback and constructive contributions, so please feel free to contribute to the project by opening an [issue](../../issues), submitting a [pull request](../../pulls). Thank you.
+We value feedback and constructive contributions, so please feel free to contribute to the project by opening an [issue](../../issues) or submitting a [pull request](../../pulls). Thank you.
 
 ## License
-This project is licensed under the [MIT License](./LICENSE).
+This project is licensed under the terms of the [MIT License](./LICENSE).
