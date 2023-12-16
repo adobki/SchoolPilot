@@ -76,41 +76,4 @@ class RedisClient {
 }
 
 const redisClient = new RedisClient();
-// export default redisClient;
-// Test if the connection is alive
-// Test if the connection is alive
-// const testConnection = async () => {
-//   try {
-//     const isAlive = await redisClient.isAlive();
-//     console.log(`Connection is alive: ${isAlive}`);
-//   } catch (error) {
-//     console.error(error);
-//   } finally {
-//     // Close the Redis connection only if it's still open
-//     if (redisClient.client.connected) {
-//       redisClient.client.quit();
-//       console.log('Redis connection closed');
-//     }
-//   }
-// };
-
-// // test saving a key and reading it back
-// // set timeout 20 secs
-// setTimeout(() => {
-//   testConnection();
-// }, 20000);
-
-
-
-// const value = uuidv4();
-// const key = `sP_${value}`;
-
-// async function testSetGet() {
-//   await redisClient.set(key, value, 60);
-//   const result = await redisClient.get(key);
-//   console.log(result);
-// }
-
-// testSetGet();
-
 module.exports = redisClient;
