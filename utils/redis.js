@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 /* eslint-disable no-else-return */
+/* eslint-disable no-unused-vars */
 // After the class definition, create and export an instance of RedisClient called redisClient
 const { createClient } = require('redis');
 const util = require('util');
@@ -10,7 +11,7 @@ const userName = 'red-clue7kocmk4c738915k0';
 const password = 'EcT3vlVLShamVqKYdi0iy4BJY55zzwQ8';
 const host = 'oregon-redis.render.com';
 const port = 6379;
-const conString =  `rediss://${userName}:${password}@${host}:${port}`;
+const conString = `rediss://${userName}:${password}@${host}:${port}`;
 
 // create a class called RedisClient
 class RedisClient {
