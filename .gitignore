@@ -133,6 +133,7 @@ dist
 # personal test files
 testBK.js
 testDBK.js
+testDBv1.js
 
 # ide files
 .idea/
