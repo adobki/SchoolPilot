@@ -27,7 +27,13 @@ module.exports = {
       'LabeledStatement',
       'WithStatement',
     ],
-  },
+    'arrow-parens': 'off',
+    'import/extensions': 'off',
+    'no-param-reassign': 'off',
+    'newline-per-chained-call': 'off',
+    'object-curly-newline': 'off',
+    'func-names ': 'off',
+},
   overrides:[
     {
       files: ['*.js'],
