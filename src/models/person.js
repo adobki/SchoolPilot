@@ -2,7 +2,10 @@
 
 const { v4: uuid } = require('uuid');
 const { ObjectId, enums } = require('./base');
-const { Department, Course } = require('./school');
+const { Faculty } = require('./faculty');
+const { Department } = require('./department');
+const { Course } = require('./course');
+const { Record } = require('./record');
 
 const { genders, statuses } = enums.students;
 
