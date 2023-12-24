@@ -45,9 +45,29 @@ const privileges = {
   SuperAdmin: { ...Admin, ...SuperAdmin },
 };
 
+// System attributes (user-immutable attributes that can only be set automatically)
+const immutableGlobal = ['id', '_id', 'createdAt', 'updatedAt'];
+const immutableDepartment = [...immutableGlobal, 'availableCourses'];
+const immutableRecord = [...immutableGlobal, 'createdBy', 'status'];
+const immutablePerson = [...immutableGlobal, 'status', 'password', 'resetPwd', 'resetTTL', 'resetOTP'];
+const immutableStudent = [...immutablePerson, 'registeredCourses'];
+const immutableStaff = [...immutablePerson, 'assignedCourses'];
+const immutable = [...new Set(
+  [immutableDepartment, immutableRecord, immutableStaff, immutableStudent].flatMap(x => x),
+)];
+
 module.exports = {
   dbClient,
   ObjectId: mongoose.Types.ObjectId,
   enums,
   privileges,
+  immutables: {
+    all: immutable,
+    Faculty: immutableGlobal,
+    Course: immutableGlobal,
+    Department: immutableDepartment,
+    Record: immutableRecord,
+    Staff: immutableStaff,
+    Student: immutableStudent,
+  },
 };
