@@ -1,8 +1,8 @@
-// Student class: User accounts for staff
+// Staff class: User accounts for staff
 
 const mongoose = require('mongoose');
 const { ObjectId, enums } = require('./base');
-const { person, personMutableAttr } = require('./person');
+const { person, personMutableAttr, personMethods } = require('./person');
 
 const { titles, roles } = enums.staff;
 
@@ -13,24 +13,26 @@ const staff = {
   title: { type: String, enum: titles, required: true },
   assignedCourses: [{ type: ObjectId, ref: 'Course' }],
 };
-const mutable = [...personMutableAttr];
+
+// Create staff schema from person + staff properties
 const staffSchema = new mongoose.Schema(
   { ...person, ...staff }, { timestamps: true, collection: 'staff' },
 );
 
-// Class method for updating profile
-staffSchema.methods.updateProfile = async function (attributes) {
-  for (const [key, val] of Object.entries(attributes)) {
-    if (mutable.includes(key)) this[key] = val;
-  }
-  return this.save();
-};
+// Add all imported person methods to staff schema
+for (const [methodName, method] of Object.entries(personMethods)) {
+  staffSchema.methods[methodName] = method;
+}
+
+// Getter for staff full name
+staffSchema.virtual('name').get(personMethods.getFullName);
+staffSchema.virtual('fullname').get(personMethods.getFullName);
 
 // Staff class
 const Staff = mongoose.model('Staff', staffSchema);
 
 module.exports = {
   Staff,
-  mutable,
+  mutable: personMutableAttr,
   enums,
 };
