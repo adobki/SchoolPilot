@@ -1,7 +1,7 @@
 // Person: Base class and methods for all user account types
 
 const { v4: uuid } = require('uuid');
-const { ObjectId, enums } = require('./base');
+const { ObjectId, enums, privileges } = require('./base');
 const { Faculty } = require('./faculty');
 const { Department } = require('./department');
 const { Course } = require('./course');
@@ -14,7 +14,7 @@ const person = {
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   middleName: { type: String },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   status: { type: String, enum: statuses, default: statuses[0] },
   department: { type: ObjectId, ref: 'Department', required: true },
   gender: { type: String, enum: genders, required: true },
@@ -32,6 +32,22 @@ const person = {
 const personMutableAttr = [
   'email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture',
 ];
+
+/**
+ * Validations and constraints for creating a new user account.
+ * Enforces some default values on new accounts for compliance
+ * with the business logic, security, or both in some cases.
+ */
+function validateNewPerson() {
+  // Ensure new person has defaults where applicable
+  if (this.isNew) {
+    [this.status] = statuses;
+    this.password = undefined;
+    this.resetPwd = undefined; this.resetTTL = undefined; this.resetOTP = undefined;
+  }
+  // Set staff privileges based on assigned role (and prevents manual reassignment)
+  this.privileges = privileges[this.role];
+}
 
 /**
  * Getter for `name` and `fullname` virtual properties. Returns full name
@@ -91,12 +107,16 @@ async function resetPassword(OTP, newPassword) {
 module.exports = {
   person,
   personMethods: {
+    validateNewPerson,
     getFullName,
     updateProfile,
     forgotPassword,
     resetPassword,
+    // deleteProfile,
   },
   personMutableAttr,
+  Faculty,
   Department,
   Course,
+  Record,
 };

@@ -29,6 +29,9 @@ for (const [methodName, method] of Object.entries(personMethods)) {
   studentSchema.methods[methodName] = method;
 }
 
+// Validations and constraints for creating a student
+studentSchema.pre('validate', personMethods.validateNewPerson);
+
 // Getter for student's full name
 studentSchema.virtual('name').get(personMethods.getFullName);
 studentSchema.virtual('fullname').get(personMethods.getFullName);
