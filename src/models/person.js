@@ -33,14 +33,22 @@ const personMutableAttr = [
   'email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture',
 ];
 
-// Getter for `name` and `fullname`
+/**
+ * Getter for `name` and `fullname` virtual properties. Returns full name
+ * by concatenating the user's `firstName`, `middleName`, and `lastName`.
+ * @returns {String} "`firstName` + [`middleName` + ]`lastName`"
+ */
 function getFullName() {
   const { firstName, middleName, lastName } = this;
   if (middleName) return [firstName, middleName, lastName].join(' ');
   return [firstName, lastName].join(' ');
 }
 
-// Method for updating profile
+/**
+ * Method for users to update their own profile. Includes security checks.
+ * @param {object} attributes User's attributes to be updated.
+ * @returns {promise.<mongoose.Model>} User object with valid updated attributes.
+ */
 async function updateProfile(attributes) {
   for (const [key, val] of Object.entries(attributes)) {
     if (personMutableAttr.includes(key)) this[key] = val;
@@ -48,7 +56,12 @@ async function updateProfile(attributes) {
   return this.save();
 }
 
-// Method for initiating password reset
+/**
+ * Method for initiating password reset when a user forgets their password
+ * or doesn't have one yet (at account activation). This creates a time-
+ * bound OTP/token for the current account, then stores and returns it.
+ * @returns {promise.<String>} Password reset token/OTP.
+ */
 async function forgotPassword() {
   this.resetPwd = true;
   this.resetTTL = Date.now() + (1000 * 60 * 30); // 30 minutes validity
@@ -57,7 +70,14 @@ async function forgotPassword() {
   return this.resetOTP;
 }
 
-// Method for resetting password
+/**
+ * Method for resetting a user's password after they have initiated a password
+ * reset. This checks that given OTP is valid (exists and not expired), then
+ * updates the user's password to the new one and ends the password reset cycle.
+ * @param {string} OTP One-Time Password/token for resetting the user's password.
+ * @param {string} newPassword New password provided by the user.
+ * @returns {promise.<mongoose.Model>} User object with updated password.
+ */
 async function resetPassword(OTP, newPassword) {
   if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case insensitive token
     if (this.resetTTL < Date.now()) return { error: 'ValueError: OTP has expired' };
@@ -67,6 +87,7 @@ async function resetPassword(OTP, newPassword) {
   }
   return { error: 'ValueError: Invalid OTP' };
 }
+
 module.exports = {
   person,
   personMethods: {
