@@ -40,17 +40,17 @@ staffSchema.virtual('fullname').get(personMethods.getFullName);
  * must be assigned to the staff. Therefore, only the lecturer(s) for a specific course can post
  * students' results for same, and only admins can create the other types.
  * @param {string} type `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
- * @param {object} attributes Attributes to be assigned to the new object.
- * @returns {mongoose.Model.<Staff>}
+ * @param {object} attributes Attributes to be assigned to the new object/document.
+ * @returns {mongoose.model}
  */
 staffSchema.methods.createNew = function createNew(type, attributes) {
-  if (!models.includes(type)) return { error: 'ValueError: Invalid type' };
+  if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
   if (!attributes || typeof attributes !== 'object') return { error: 'ValueError: Invalid attributes' };
 
   if (type === 'Record') {
     // Check if specified course is assigned to this staff
     if (this.assignedCourses.map(obj => String(obj._id)).includes(String(attributes.course))) {
-      return mongoose.model('Record')({
+      return mongoose.model(type)({
         ...attributes,
         status: enums.courses.statuses[0], // Enforces default status on new records
         createdBy: this.id, // Permanently links the new record to the current staff

@@ -17,7 +17,6 @@ const record = {
   status: {
     type: String,
     enum: enums.courses.statuses,
-    // default: enums.courses.statuses[0],
   },
 };
 const recordSchema = new mongoose.Schema({ ...record }, { timestamps: true });
