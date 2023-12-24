@@ -12,10 +12,11 @@ const types = ['UG', 'PG'];
 const standings = ['good', 'withdrawn', 'graduated', 'suspended', 'rusticated'];
 const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.', 'Emeritus'];
 const roles = ['Lecturer', 'HOD', 'Dean', 'Admin', 'SuperAdmin'];
+const approvals = ['pending', 'HOD', 'approved'];
 
 const enums = {
-  courses: { levels, semesters },
   staff: { genders, statuses, titles, roles },
+  courses: { levels, semesters, statuses: approvals },
   students: { genders, statuses, levels, types, standings, roles: ['Student'] },
 };
 
