@@ -32,7 +32,6 @@ module.exports = {
     'no-param-reassign': 'off',
     'newline-per-chained-call': 'off',
     'object-curly-newline': 'off',
-    'func-names': 'off',
 },
   overrides:[
     {

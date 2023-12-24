@@ -34,7 +34,7 @@ studentSchema.virtual('name').get(personMethods.getFullName);
 studentSchema.virtual('fullname').get(personMethods.getFullName);
 
 // Class method for unregistering courses (for the student's current level)
-studentSchema.methods.unregisterCourses = async function (semester) {
+studentSchema.methods.unregisterCourses = async function unregisterCourses(semester) {
   const i = this.registeredCourses
     .findIndex(course => course.level === this.level && course.semester === semester);
   if (i >= 0) {
@@ -43,7 +43,7 @@ studentSchema.methods.unregisterCourses = async function (semester) {
 };
 
 // Class method for registering courses (for the student's current level)
-studentSchema.methods.registerCourses = async function (courseIDs, semester) {
+studentSchema.methods.registerCourses = async function registerCourses(courseIDs, semester) {
   if (!Array.isArray(courseIDs)) return { error: 'ValueError: `courseIDs` must be an array of courseIDs' };
   for (const id of courseIDs) {
     if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
@@ -64,7 +64,7 @@ studentSchema.methods.registerCourses = async function (courseIDs, semester) {
 };
 
 // Static method for retrieving registered courses
-studentSchema.statics.getRegisteredCourses = async function (id) {
+studentSchema.statics.getRegisteredCourses = async function getRegisteredCourses(id) {
   if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
   return (await this.findById(id).populate('registeredCourses.courses')).registeredCourses;
 };
