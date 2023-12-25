@@ -41,7 +41,7 @@ staffSchema.virtual('fullname').get(personMethods.getFullName);
  * students' results for same, and only admins can create the other types.
  * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
  * @param {object} attributes Attributes to be assigned to the new object/document.
- * @returns {mongoose.model}
+ * @returns {mongoose.Model}
  */
 staffSchema.methods.createNew = async function createNew(type, attributes) {
   if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
@@ -121,6 +121,74 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
     obj[key] = value;
   }
   return obj.save();
+};
+
+/**
+ * Class method for creating multiple objects/documents in the database simultaneously. Uses the
+ * Mongoose `insertMany` method to optimise insertion. However, insertions are done in batches
+ * of 500 objects to reduce memory/buffer issues.
+ * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
+ * @param {object[]} attributes Array of attributes to be assigned per object/document.
+ * @returns {object} Object with two properties: `inserted` docs array and `failed` objects array.
+*/
+staffSchema.methods.createMany = async function createMany(type, attributes) {
+  if (!this.privileges.createMany) return { error: 'Access denied' }; // Check staff privileges
+  if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
+  if (!Array.isArray(attributes)) return { error: 'ValueError: attributes must be an array' };
+
+  // Perform security checks and apply business logic to objects/documents before insertion
+  const invalid = [];
+  attributes = attributes.map((doc, index) => {
+    if (typeof doc !== 'object') { // Validate document type
+      invalid.push({ index, error: 'ValueError: Document must be an object' }); return undefined;
+    }
+
+    for (const key of immutables[type]) delete doc[key]; // Remove user-immutable attributes
+
+    if (type === 'Record') doc.createdBy = this.id; // Permanently links record to current staff
+
+    if (type === 'Staff') { // Prevent assigning user account a higher privilege level than own
+      const validRoles = roles.slice(0, roles.findIndex(role => role === this.role) + 1);
+      if (doc.role && !validRoles.includes(doc.role)) {
+        invalid.push({ index, error: `ValueError: role must be your level (${this.role}) or lower` });
+        return undefined;
+      }
+    }
+
+    return doc;
+  });
+
+  // Insert processed documents into the database and handle duplicate key error
+  let inserted;
+  try {
+    inserted = await mongoose.model(type).insertMany(attributes, {
+      ordered: false, // Caches all insert errors and reports them only after processing all items
+      rawResult: true, // Returns object with successful inserts and cached errors
+      limit: 500, // Batch processing for memory management
+    });
+  } catch (error) {
+    if (error.code === 11000) inserted = { mongoose: { results: error.mongoose.results } };
+    else throw error;
+  }
+  let { results } = inserted.mongoose; if (!results) results = inserted.mongoose.validationErrors;
+
+  // Return results if all inserts were successful
+  if (inserted.insertedCount === attributes.length) return { inserted: results };
+
+  // Replace Mongoose error objects with custom ones from invalidated documents
+  if (invalid.length) for (const { index, error } of invalid) { results[index] = new Error(error); }
+
+  // Separate and return successful and failed inserts
+  inserted = []; const failed = [];
+  for (let index = 0; index < results.length; index += 1) {
+    const obj = results[index];
+    if (obj.stack && obj.message) failed.push({ index, error: obj.message }); // Custom error object
+    else if (obj.err && obj.err.errmsg) { // Mongoose error object
+      const val = obj.err.errmsg.match(/{\s([^{}]+)\s}/);
+      failed.push({ index, error: val ? `Duplicate! ${type} with ${val[1]} already exists` : obj.err.errmsg });
+    } else inserted.push(obj);
+  }
+  return { inserted, failed };
 };
 
 // Staff class

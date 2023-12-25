@@ -35,6 +35,7 @@ const Admin = {
   assignCourse: true,
 };
 const SuperAdmin = {
+  createMany: true,
   deleteExisting: true,
 };
 
