@@ -191,6 +191,29 @@ staffSchema.methods.createMany = async function createMany(type, attributes) {
   return { inserted, failed };
 };
 
+/**
+ * Class method for assigning courses to a lecturer (staff).
+ * Unassign courses by sending a slice or an empty array.
+ * @param {ObjectId} id ID of lecturer to be assigned the courses.
+ * @param {ObjectId[]} courses Array of courses to be assigned.
+ * @returns {mongoose.model}
+ */
+staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
+  if (!this.privileges.assignCourse) return { error: 'Access denied' };
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (!Array.isArray(courses)) return { error: 'ValueError: courses must be an array' };
+  if (courses.map(course => ObjectId.isValid(course)).includes(false)
+  ) return { error: 'ValueError: courses must be an array of ObjectIds' };
+
+  // Retrieve staff from database
+  const staff = await mongoose.model('Staff').findById(id).exec();
+  if (!staff) return { error: `ValueError: Staff with id=${id} not found` };
+
+  // Assign courses to staff (overwrites previous assignment)
+  staff.assignedCourses = courses;
+  return staff.save();
+};
+
 // Staff class
 const Staff = mongoose.model('Staff', staffSchema);
 
