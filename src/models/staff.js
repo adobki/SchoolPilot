@@ -27,8 +27,8 @@ for (const [methodName, method] of Object.entries(personMethods)) {
   staffSchema.methods[methodName] = method;
 }
 
-// Validations and constraints for creating a staff
-staffSchema.pre('validate', personMethods.validateNewPerson);
+// Validations and constraints for creating and updating a staff
+staffSchema.pre('validate', personMethods.validatePerson);
 
 // Getter for staff full name
 staffSchema.virtual('name').get(personMethods.getFullName);
