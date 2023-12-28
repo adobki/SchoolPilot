@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums, privileges, immutables } = require('./base');
-const { person, personMutableAttr, personMethods } = require('./person');
+const { person, methods, privateAttrStr, mutableAttr } = require('./person');
 
 const { titles, roles, models } = enums.staff;
 const { HOD, Dean, Admin, SuperAdmin } = privileges;
@@ -12,9 +12,9 @@ const staff = {
   staffId: { type: String, unique: true, required: true },
   role: { type: String, enum: roles, default: roles[0] },
   title: { type: String, enum: titles, required: true },
+  assignedCourses: [{ type: ObjectId, ref: 'Course' }],
   privileges: Object.fromEntries(Object.entries({ ...HOD, ...Dean, ...Admin, ...SuperAdmin })
     .map(([key]) => [key, Boolean])), // Casts `privileges` to Mongoose schema type
-  assignedCourses: [{ type: ObjectId, ref: 'Course' }],
 };
 
 // Create staff schema from person + staff properties
@@ -23,16 +23,16 @@ const staffSchema = new mongoose.Schema(
 );
 
 // Add all imported person methods to staff schema
-for (const [methodName, method] of Object.entries(personMethods)) {
+for (const [methodName, method] of Object.entries(methods)) {
   staffSchema.methods[methodName] = method;
 }
 
 // Validations and constraints for creating and updating a staff
-staffSchema.pre('validate', personMethods.validatePerson);
+staffSchema.pre('validate', methods.validatePerson);
 
 // Getter for staff full name
-staffSchema.virtual('name').get(personMethods.getFullName);
-staffSchema.virtual('fullname').get(personMethods.getFullName);
+staffSchema.virtual('name').get(methods.getFullName);
+staffSchema.virtual('fullname').get(methods.getFullName);
 
 /**
  * Class method for creating a new object/document in the database. All types require staff to have
@@ -219,7 +219,7 @@ const Staff = mongoose.model('Staff', staffSchema);
 
 module.exports = {
   Staff,
-  mutable: personMutableAttr,
+  mutableAttr,
   immutables,
   enums,
 };

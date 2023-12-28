@@ -56,19 +56,20 @@ const immutableStaff = [...immutablePerson, 'assignedCourses'];
 const immutable = [...new Set(
   [immutableDepartment, immutableRecord, immutableStaff, immutableStudent].flatMap(x => x),
 )];
+const immutables = {
+  all: immutable,
+  Faculty: immutableGlobal,
+  Course: immutableGlobal,
+  Department: immutableDepartment,
+  Record: immutableRecord,
+  Staff: immutableStaff,
+  Student: immutableStudent,
+};
 
 module.exports = {
   dbClient,
   ObjectId: mongoose.Types.ObjectId,
   enums,
   privileges,
-  immutables: {
-    all: immutable,
-    Faculty: immutableGlobal,
-    Course: immutableGlobal,
-    Department: immutableDepartment,
-    Record: immutableRecord,
-    Staff: immutableStaff,
-    Student: immutableStudent,
-  },
+  immutables,
 };

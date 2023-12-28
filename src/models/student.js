@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums } = require('./base');
-const { person, personMutableAttr, personMethods } = require('./person');
+const { person, methods, privateAttrStr, mutableAttr } = require('./person');
 
 const { levels, types, standings, roles } = enums.students;
 
@@ -25,16 +25,16 @@ const student = {
 const studentSchema = new mongoose.Schema({ ...person, ...student }, { timestamps: true });
 
 // Add all imported person methods to student schema
-for (const [methodName, method] of Object.entries(personMethods)) {
+for (const [methodName, method] of Object.entries(methods)) {
   studentSchema.methods[methodName] = method;
 }
 
 // Validations and constraints for creating and updating a student
-studentSchema.pre('validate', personMethods.validatePerson);
+studentSchema.pre('validate', methods.validatePerson);
 
 // Getter for student's full name
-studentSchema.virtual('name').get(personMethods.getFullName);
-studentSchema.virtual('fullname').get(personMethods.getFullName);
+studentSchema.virtual('name').get(methods.getFullName);
+studentSchema.virtual('fullname').get(methods.getFullName);
 
 /**
  * Class method for unregistering courses (for the student's current level and semester).
@@ -90,6 +90,6 @@ const Student = mongoose.model('Student', studentSchema);
 
 module.exports = {
   Student,
-  mutable: personMutableAttr,
+  mutableAttr,
   enums,
 };

@@ -19,19 +19,30 @@ const person = {
   department: { type: ObjectId, ref: 'Department', required: true },
   gender: { type: String, enum: genders, required: true },
   DOB: { type: Date, required: true },
-  password: String,
   nationality: String,
   stateOfOrigin: String,
   LGA: String,
   phone: Number,
   picture: String,
+  password: String,
   resetPwd: Boolean,
   resetTTL: Date,
   resetOTP: String,
 };
-const personMutableAttr = [
+const mutableAttr = [
   'email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture',
 ];
+const privateAttr = [
+  'status', 'DOB', 'stateOfOrigin', 'LGA', 'phone', 'role', '__v', 'createdAt',
+  'updatedAt', 'password', 'resetPwd', 'resetTTL', 'resetOTP',
+];
+const personPrivateAttr = privateAttr.slice(-4); // Password/reset fields
+const staffPrivateAttr = [...privateAttr, 'privileges', 'assignedCourses'];
+const studentPrivateAttr = [...privateAttr, 'registeredCourses', 'projects'];
+const privateAttrStr = ['', ...privateAttr.slice(-7, -4)].join(' -').trim();
+const personPrivateAttrStr = ['', ...personPrivateAttr].join(' -').trim();
+const staffPrivateAttrStr = ['', ...staffPrivateAttr].join(' -').trim();
+const studentPrivateAttrStr = ['', ...studentPrivateAttr].join(' -').trim();
 
 /**
  * Validations and constraints for user accounts. Enforces some
@@ -70,7 +81,7 @@ function getFullName() {
  */
 async function updateProfile(attributes) {
   for (const [key, val] of Object.entries(attributes)) {
-    if (personMutableAttr.includes(key)) this[key] = val;
+    if (mutableAttr.includes(key)) this[key] = val;
   }
   return this.save();
 }
@@ -109,15 +120,26 @@ async function resetPassword(OTP, newPassword) {
 
 module.exports = {
   person,
-  personMethods: {
+  methods: {
     validatePerson,
     getFullName,
     updateProfile,
     forgotPassword,
     resetPassword,
-    // deleteProfile,
   },
-  personMutableAttr,
+  privateAttr: {
+    all: personPrivateAttr.slice(-4),
+    person: personPrivateAttr,
+    staff: staffPrivateAttr,
+    student: studentPrivateAttr,
+  },
+  privateAttrStr: {
+    all: privateAttrStr,
+    person: personPrivateAttrStr,
+    staff: staffPrivateAttrStr,
+    student: studentPrivateAttrStr,
+  },
+  mutableAttr,
   Faculty,
   Department,
   Course,
