@@ -29,12 +29,19 @@ for (const [methodName, method] of Object.entries(personMethods)) {
   studentSchema.methods[methodName] = method;
 }
 
+// Validations and constraints for creating and updating a student
+studentSchema.pre('validate', personMethods.validatePerson);
+
 // Getter for student's full name
 studentSchema.virtual('name').get(personMethods.getFullName);
 studentSchema.virtual('fullname').get(personMethods.getFullName);
 
-// Class method for unregistering courses (for the student's current level)
-studentSchema.methods.unregisterCourses = async function (semester) {
+/**
+ * Class method for unregistering courses (for the student's current level and semester).
+ * @param {number} semester Current semester.
+ * @returns {Promise.<boolean>} `true` on success, `false` otherwise.
+ */
+studentSchema.methods.unregisterCourses = async function unregisterCourses(semester) {
   const i = this.registeredCourses
     .findIndex(course => course.level === this.level && course.semester === semester);
   if (i >= 0) {
@@ -42,13 +49,18 @@ studentSchema.methods.unregisterCourses = async function (semester) {
   } return false;
 };
 
-// Class method for registering courses (for the student's current level)
-studentSchema.methods.registerCourses = async function (courseIDs, semester) {
+/**
+ * Class method for unregistering courses (for the student's current level and semester).
+ * @param {ObjectId[]} courseIDs Array of ObjectIds for courses to be registered.
+ * @param {number} semester Current semester.
+ * @returns {promise.<mongoose.Model.<Student>>} User object with registered courses.
+ */
+studentSchema.methods.registerCourses = async function registerCourses(courseIDs, semester) {
   if (!Array.isArray(courseIDs)) return { error: 'ValueError: `courseIDs` must be an array of courseIDs' };
   for (const id of courseIDs) {
     if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
   }
-  if (semester === undefined) [semester] = enums.courses.semesters;
+  if (semester === undefined) [semester] = enums.courses.semesters; // #ROADMAP: Track this globally
   if (!enums.courses.semesters.includes(semester)) {
     return { error: `ValueError: ${semester}. Semester must be one of these: ${enums.courses.semesters}` };
   }
@@ -63,8 +75,12 @@ studentSchema.methods.registerCourses = async function (courseIDs, semester) {
   return this.save();
 };
 
-// Static method for retrieving registered courses
-studentSchema.statics.getRegisteredCourses = async function (id) {
+/**
+ * Static method for retrieving registered courses for a student by their id.
+ * @param {ObjectId} id Student's id (ObjectId).
+ * @returns {promise.<Student.registeredCourses>} Array of all courses registered by the user.
+ */
+studentSchema.statics.getRegisteredCourses = async function getRegisteredCourses(id) {
   if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
   return (await this.findById(id).populate('registeredCourses.courses')).registeredCourses;
 };

@@ -12,15 +12,63 @@ const types = ['UG', 'PG'];
 const standings = ['good', 'withdrawn', 'graduated', 'suspended', 'rusticated'];
 const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.', 'Emeritus'];
 const roles = ['Lecturer', 'HOD', 'Dean', 'Admin', 'SuperAdmin'];
+const approvals = ['pending', 'HOD', 'approved'];
+const models = ['Faculty', 'Department', 'Course', 'Record', 'Staff', 'Student'];
 
 const enums = {
-  courses: { levels, semesters },
-  staff: { genders, statuses, titles, roles },
+  courses: { levels, semesters, statuses: approvals },
+  staff: { genders, statuses, titles, roles, models },
   students: { genders, statuses, levels, types, standings, roles: ['Student'] },
 };
+
+// Privileges for staff accounts by role
+const HOD = {
+  approveResult: true,
+};
+const Dean = {
+  approveResult: true,
+  assignCourse: true,
+};
+const Admin = {
+  createNew: true,
+  updateExisting: true,
+  assignCourse: true,
+};
+const SuperAdmin = {
+  createMany: true,
+  deleteExisting: true,
+};
+
+const privileges = {
+  HOD,
+  Dean: { ...HOD, ...Dean },
+  Admin,
+  SuperAdmin: { ...Admin, ...SuperAdmin },
+};
+
+// System attributes (user-immutable attributes that can only be set automatically)
+const immutableGlobal = ['id', '_id', 'createdAt', 'updatedAt'];
+const immutableDepartment = [...immutableGlobal, 'availableCourses'];
+const immutableRecord = [...immutableGlobal, 'createdBy', 'status'];
+const immutablePerson = [...immutableGlobal, 'status', 'password', 'resetPwd', 'resetTTL', 'resetOTP'];
+const immutableStudent = [...immutablePerson, 'registeredCourses'];
+const immutableStaff = [...immutablePerson, 'assignedCourses'];
+const immutable = [...new Set(
+  [immutableDepartment, immutableRecord, immutableStaff, immutableStudent].flatMap(x => x),
+)];
 
 module.exports = {
   dbClient,
   ObjectId: mongoose.Types.ObjectId,
   enums,
+  privileges,
+  immutables: {
+    all: immutable,
+    Faculty: immutableGlobal,
+    Course: immutableGlobal,
+    Department: immutableDepartment,
+    Record: immutableRecord,
+    Staff: immutableStaff,
+    Student: immutableStudent,
+  },
 };
