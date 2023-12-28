@@ -5,6 +5,7 @@ const { ObjectId, enums } = require('./base');
 const { person, methods, privateAttrStr, mutableAttr } = require('./person');
 
 const { levels, types, standings, roles } = enums.students;
+const { semesters } = enums.courses;
 
 // Student properties
 const student = {
@@ -15,8 +16,8 @@ const student = {
   standing: { type: String, enum: standings, default: standings[0] },
   major: { type: String, required: true },
   registeredCourses: [{
-    level: { type: Number, enum: enums.courses.levels, required: true },
-    semester: { type: Number, enum: enums.courses.semesters, required: true },
+    level: { type: Number, enum: levels, required: true },
+    semester: { type: Number, enum: semesters, required: true },
     courses: [{ type: ObjectId, ref: 'Course', required: true }],
     _id: { type: ObjectId }, // This hides _id in the embedded object
   }],
@@ -37,11 +38,47 @@ studentSchema.virtual('name').get(methods.getFullName);
 studentSchema.virtual('fullname').get(methods.getFullName);
 
 /**
+ * Class method for getting list of available courses for student's course registration.
+ * @param {number} semester Current semester of the school year.
+ */
+studentSchema.methods.getAvailableCourses = async function getAvailableCourses(semester) {
+  if (!semester) [semester] = semesters; // #ROADMAP: Track this globally
+  if (!semesters.includes(semester)
+  ) return { error: `ValueError: ${semester}. Semester must be one of these: ${semesters}` };
+
+  // Query helpers
+  const select = { name: 1, availableCourses: { $elemMatch: { level: this.level, semester } } };
+  const populate = ['availableCourses.courses', privateAttrStr.all];
+
+  // Retrieve available courses from database for student's department by level and semester
+  const department = await mongoose.model('Department').findOne({ _id: this.department })
+    .select({ ...select, faculty: 1 }).populate(...populate);
+  if (!department) return { error: 'Invalid department. Contact an admin to fix it' };
+
+  // Retrieve available courses from database for student's faculty by level and semester
+  const faculty = await mongoose.model('Faculty').findOne({ _id: department.faculty })
+    .select(select).populate(...populate);
+  if (!faculty) return { error: 'Invalid faculty. Contact an admin to fix it' };
+
+  // Parse and return results
+  const courses = [department, faculty].map(obj => ({
+    _id: obj._id,
+    name: obj.name,
+    courses: obj.availableCourses.length ? obj.availableCourses[0].courses : undefined,
+  }));
+  return { department: courses[0], faculty: courses[1] };
+};
+
+/**
  * Class method for unregistering courses (for the student's current level and semester).
  * @param {number} semester Current semester.
  * @returns {Promise.<boolean>} `true` on success, `false` otherwise.
  */
 studentSchema.methods.unregisterCourses = async function unregisterCourses(semester) {
+  if (!semester) [semester] = semesters; // #ROADMAP: Track this globally
+  if (!semesters.includes(semester)
+  ) return { error: `ValueError: ${semester}. Semester must be one of these: ${semesters}` };
+
   const i = this.registeredCourses
     .findIndex(course => course.level === this.level && course.semester === semester);
   if (i >= 0) {
@@ -50,39 +87,48 @@ studentSchema.methods.unregisterCourses = async function unregisterCourses(semes
 };
 
 /**
- * Class method for unregistering courses (for the student's current level and semester).
- * @param {ObjectId[]} courseIDs Array of ObjectIds for courses to be registered.
+ * Class method for registering courses (for the student's current level and semester).
+ * @param {ObjectId[]} courseIds Array of ObjectIds for courses to be registered.
  * @param {number} semester Current semester.
  * @returns {promise.<mongoose.Model.<Student>>} User object with registered courses.
  */
-studentSchema.methods.registerCourses = async function registerCourses(courseIDs, semester) {
-  if (!Array.isArray(courseIDs)) return { error: 'ValueError: `courseIDs` must be an array of courseIDs' };
-  for (const id of courseIDs) {
+studentSchema.methods.registerCourses = async function registerCourses(courseIds, semester) {
+  if (!Array.isArray(courseIds)) return { error: 'ValueError: courseIDs must be an array of courseIDs' };
+  if (!courseIds.length) return { error: 'ValueError: None of the given courses is available' };
+  for (const id of courseIds) {
     if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
   }
-  if (semester === undefined) [semester] = enums.courses.semesters; // #ROADMAP: Track this globally
-  if (!enums.courses.semesters.includes(semester)) {
-    return { error: `ValueError: ${semester}. Semester must be one of these: ${enums.courses.semesters}` };
-  }
-  await this.unregisterCourses(semester); // Delete previous record for current level if exists
+  if (!semester) [semester] = semesters; // #ROADMAP: Track this globally
+  if (!semesters.includes(semester)
+  ) return { error: `ValueError: ${semester}. Semester must be one of these: ${semesters}` };
 
-  // Register selected courses (use Set to ignore duplicates in given list)
-  this.registeredCourses.push({
-    level: this.level,
-    semester,
-    courses: [...new Set(courseIDs)],
-  });
+  // Check if courses are available for registration
+  const courses = await this.getAvailableCourses(semester);
+  if (courses.error) return { error: courses.error };
+  const availableIds = [...courses.department.courses, ...courses.faculty.courses]
+    .map(course => String(course._id));
+
+  // Validate given course IDs against available IDs
+  const validIds = [...new Set(courseIds)].reduce((results, id) => {
+    id = String(id); if (availableIds.includes(id)) results.push(id);
+    return results;
+  }, []);
+
+  if (!validIds.length) return { error: 'ValueError: None of the given courses is available' };
+
+  // Delete previous record for current semester if exists, then register given courses
+  await this.unregisterCourses(semester);
+  this.registeredCourses.push({ level: this.level, semester, courses: validIds });
   return this.save();
 };
 
 /**
- * Static method for retrieving registered courses for a student by their id.
- * @param {ObjectId} id Student's id (ObjectId).
+ * Class method for retrieving full details of a student's registered courses.
  * @returns {promise.<Student.registeredCourses>} Array of all courses registered by the user.
  */
-studentSchema.statics.getRegisteredCourses = async function getRegisteredCourses(id) {
-  if (!ObjectId.isValid(id)) return { error: `ValueError: ${id} is not a valid ObjectId` };
-  return (await this.findById(id).populate('registeredCourses.courses')).registeredCourses;
+studentSchema.methods.getRegisteredCourses = async function getRegisteredCourses() {
+  await this.populate('registeredCourses.courses', privateAttrStr.all);
+  return this.registeredCourses;
 };
 
 /**

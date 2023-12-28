@@ -41,7 +41,7 @@ staffSchema.virtual('fullname').get(methods.getFullName);
  * can post students' results and projects for same, and only admins can create the other types.
  * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
  * @param {object} attributes Attributes to be assigned to the new object/document.
- * @returns {mongoose.Model}
+ * @returns {promise.<mongoose.Model>}
  */
 staffSchema.methods.createNew = async function createNew(type, attributes) {
   if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
@@ -79,7 +79,7 @@ staffSchema.methods.createNew = async function createNew(type, attributes) {
  * @param {ObjectId} id ID of object to be updated.
  * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
  * @param {object} attributes Attributes to be assigned to the object/document.
- * @returns {mongoose.model}
+ * @returns {promise.<mongoose.model>}
  */
 staffSchema.methods.updateExisting = async function updateExisting(id, type, attributes) {
   if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
@@ -125,7 +125,7 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
  * of 500 objects to reduce memory/buffer issues.
  * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
  * @param {object[]} attributes Array of attributes to be assigned per object/document.
- * @returns {object} Object with two properties: `inserted` docs array and `failed` objects array.
+ * @returns {promise.<object>} Object with two properties: `inserted` docs array and `failed` objects array.
 */
 staffSchema.methods.createMany = async function createMany(type, attributes) {
   if (!this.privileges.createMany) return { error: 'Access denied' }; // Check staff privileges
@@ -192,7 +192,7 @@ staffSchema.methods.createMany = async function createMany(type, attributes) {
  * Unassign courses by sending a slice or an empty array.
  * @param {ObjectId} id ID of lecturer to be assigned the courses.
  * @param {ObjectId[]} courses Array of courses to be assigned.
- * @returns {mongoose.model}
+ * @returns {promise.<mongoose.model>}
  */
 staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
   if (!this.privileges.assignCourse) return { error: 'Access denied' };
