@@ -1,37 +1,35 @@
-/* eslint-disable jest/require-hook */
-/* eslint-disable import/no-extraneous-dependencies */
 const mongoose = require('mongoose');
 
-const password = 'schoolpilot';
-const uri = `mongodb+srv://alxSE:${password}@schoolpilot.0zpvosm.mongodb.net/?retryWrites=true&w=majority`;
+// MongoDB connection parameters
+const username = process.env.SP_USERNAME ? process.env.SP_USERNAME : 'SchoolPilot';
+const password = process.env.SP_PASSWORD ? process.env.SP_PASSWORD : 'SchoolPilot';
+const database = process.env.SP_DATABASE ? process.env.SP_DATABASE : 'SchoolPilot';
+const host = process.env.SP_HOST ? process.env.SP_HOST : 'schoolpilot.0zpvosm.mongodb.net';
+const options = 'retryWrites=true&w=majority';
+const uri = `mongodb+srv://${username}:${password}@${host}/${database}?${options}`;
 
 class DBClient {
   constructor() {
-    this.init();
+    this.client = this.init();
   }
 
   async init() {
+    delete this.client; // Forces this.client state update once init has been called
     try {
-      this.client = await mongoose.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-
       // Access the Mongoose connection object only after it's returned by connect
-      console.log('Connected to MongoDB established successfully!');
+      const client = await mongoose.connect(uri);
+      console.log('Connection to MongoDB established successfully!');
+      return client;
     } catch (error) {
       console.error('Error connecting to MongoDB:', error);
+      return undefined;
     }
   }
 
   async isAlive() {
     // Check if the Mongoose connection state is open
-    try {
-      await this.client;
-      return true;
-    } catch (error) {
-      return false;
-    }
+    if (await this.client) return true;
+    return false;
   }
 }
 
