@@ -13,7 +13,7 @@ const standings = ['good', 'withdrawn', 'graduated', 'suspended', 'rusticated'];
 const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.', 'Emeritus'];
 const roles = ['Lecturer', 'HOD', 'Dean', 'Admin', 'SuperAdmin'];
 const approvals = ['pending', 'HOD', 'approved'];
-const models = ['Faculty', 'Department', 'Course', 'Record', 'Staff', 'Student'];
+const models = ['Faculty', 'Department', 'Course', 'Project', 'Record', 'Staff', 'Student'];
 
 const enums = {
   courses: { levels, semesters, statuses: approvals },
@@ -49,6 +49,7 @@ const privileges = {
 // System attributes (user-immutable attributes that can only be set automatically)
 const immutableGlobal = ['id', '_id', 'createdAt', 'updatedAt'];
 const immutableDepartment = [...immutableGlobal, 'availableCourses'];
+const immutableProject = [...immutableGlobal, 'createdBy', 'submissions'];
 const immutableRecord = [...immutableGlobal, 'createdBy', 'status'];
 const immutablePerson = [...immutableGlobal, 'status', 'password', 'resetPwd', 'resetTTL', 'resetOTP'];
 const immutableStudent = [...immutablePerson, 'registeredCourses'];
@@ -60,6 +61,7 @@ const immutables = {
   all: immutable,
   Faculty: immutableGlobal,
   Course: immutableGlobal,
+  Project: immutableProject,
   Department: immutableDepartment,
   Record: immutableRecord,
   Staff: immutableStaff,

@@ -85,6 +85,49 @@ studentSchema.statics.getRegisteredCourses = async function getRegisteredCourses
   return (await this.findById(id).populate('registeredCourses.courses')).registeredCourses;
 };
 
+/**
+ * Class method for retrieving student's projects for this semester's registered courses.
+ * @returns {promise.<mongoose.model[]>}
+ */
+studentSchema.methods.getProjects = async function getProjects() {
+  if (!this.registeredCourses.length) return [];
+
+  // Retrieve projects for current semester with students' submission and return it
+  return mongoose.model('Project')
+    .find({ course: { $in: this.registeredCourses.slice(-1)[0].courses } })
+    .select({ submissions: { $elemMatch: { student: this.id } } })
+    .populate('course createdBy', privateAttrStr.staff);
+};
+
+/**
+ * Class method for submitting a student's answer for one of their active projects.
+ * @param {ObjectId} id ID of a project for one of student's registered courses.
+ * @param {String} answer Student's submission for the project.
+ * @returns {promise.<mongoose.model>}
+ */
+studentSchema.methods.submitProject = async function submitProject(id, answer) {
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (typeof answer !== 'string') return { error: 'ValueError: answer must be a string' };
+
+  // Retrieve project with given id from database if under one of student's courses
+  const project = await mongoose.model('Project')
+    .findOne({ _id: id, course: { $in: this.registeredCourses.slice(-1)[0].courses } })
+    .populate('course createdBy', privateAttrStr.staff);
+    // .findOneAndUpdate({ _id, course: { $in: this.registeredCourses.slice(-1)[0].courses },
+    // }, { $set: { 'submissions.$.answer': answer } }, { new: true, upsert: true });
+  if (!project) return { error: `ValueError: Student has no project with id=${id}` };
+
+  // Prevent submitting answers after a project's deadline
+  if (project.deadline < Date.now()) return { error: 'Project is past its deadline' };
+
+  // Submit student's answer or update previous submission if any
+  const submitted = project.submissions.findIndex(sub => String(sub.student) === String(this.id));
+  if (submitted > -1) project.submissions[submitted] = { student: this.id, answer };
+  else project.submissions.push({ student: this.id, answer });
+
+  return project.save();
+};
+
 // Student class
 const Student = mongoose.model('Student', studentSchema);
 

@@ -35,11 +35,11 @@ staffSchema.virtual('name').get(methods.getFullName);
 staffSchema.virtual('fullname').get(methods.getFullName);
 
 /**
- * Class method for creating a new object/document in the database. All types require staff to have
- * a specific priviledge to create them, except `Record`, which requires that the associated course
- * must be assigned to the staff. Therefore, only the lecturer(s) for a specific course can post
- * students' results for same, and only admins can create the other types.
- * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
+ * Class method for creating a new object/document in the database. All types require a specific
+ * priviledge to create them, except `Project` and `Record`, which require that the associated
+ * course must be assigned to the staff. Therefore, only the lecturer(s) for a specific course
+ * can post students' results and projects for same, and only admins can create the other types.
+ * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
  * @param {object} attributes Attributes to be assigned to the new object/document.
  * @returns {mongoose.Model}
  */
@@ -47,14 +47,14 @@ staffSchema.methods.createNew = async function createNew(type, attributes) {
   if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
   if (!attributes || typeof attributes !== 'object') return { error: 'ValueError: Invalid attributes' };
 
-  if (type === 'Record') {
+  // Prevent setting user-immutable attributes on current model type
+  for (const key of immutables[type]) { delete attributes[key]; }
+
+  if (type === 'Project' || type === 'Record') {
     // Check if specified course is assigned to this staff
     if (this.assignedCourses.map(obj => String(obj._id)).includes(String(attributes.course))) {
-      return mongoose.model(type)({
-        ...attributes,
-        status: enums.courses.statuses[0], // Enforces default status on new records
-        createdBy: this.id, // Permanently links the new record to the current staff
-      }).save();
+      attributes.createdBy = this.id; // Permanently link the new document to the current staff
+      return mongoose.model(type)(attributes).save();
     } return { error: 'Access denied' };
   }
 
@@ -67,16 +67,17 @@ staffSchema.methods.createNew = async function createNew(type, attributes) {
     const valid = validRoles.includes(attributes.role);
     if (!valid) return { error: `ValueError: role must be your level (${this.role}) or lower` };
   }
+
   return mongoose.model(type)(attributes).save();
 };
 
 /**
- * Class method for updating an existing object/document in the database. All types require staff
- * to have a specific priviledge to update them, except `Record`, which can only be updated by the
- * the staff that created it. Therefore, only the creator of a record can edit it, and only admins
- * can edit the other types.
+ * Class method for updating an existing object/document in the database. All types require
+ * a specific priviledge to update them, except `Project` and `Record`, which can only be
+ * updated by the staff who created them. Therefore, only the creator of a project or record
+ * can edit it, and only admins can edit the other types.
  * @param {ObjectId} id ID of object to be updated.
- * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
+ * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
  * @param {object} attributes Attributes to be assigned to the object/document.
  * @returns {mongoose.model}
  */
@@ -89,16 +90,15 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
   const obj = await mongoose.model(type).findById(id).exec();
   if (!obj) return { error: `ValueError: ${type} with id=${id} not found` };
 
-  if (type === 'Record') {
-    // Check if record is owned by this staff
+  if (type === 'Project' || type === 'Record') {
+    // Check if project or record is owned by this staff
     if (String(obj.createdBy) !== String(this.id)) return { error: 'Access denied' };
     // Prevent updating approved records
     if (obj.status === enums.courses.statuses.slice(-1)[0]
     ) return { error: 'Access denied! Approved records can not be updated' };
-  }
 
-  // Check staff privileges before proceeeding with other types
-  if (type !== 'Record' && !this.privileges.createNew) return { error: 'Access denied' };
+    // Check staff privileges before proceeeding with other types
+  } else if (!this.privileges.createNew) return { error: 'Access denied' };
 
   if (type === 'Staff') {
     // Prevent updating own account with this method (must use updateProfile method)
@@ -112,14 +112,10 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
   }
 
   // Prevent updating user-immutable attributes on current model type
-  for (const key of immutables[type]) {
-    delete attributes[key];
-  }
+  for (const key of immutables[type]) { delete attributes[key]; }
 
   // Apply given attributes updates to object/document
-  for (const [key, value] of Object.entries(attributes)) {
-    obj[key] = value;
-  }
+  for (const [key, value] of Object.entries(attributes)) { obj[key] = value; }
   return obj.save();
 };
 
@@ -145,7 +141,7 @@ staffSchema.methods.createMany = async function createMany(type, attributes) {
 
     for (const key of immutables[type]) delete doc[key]; // Remove user-immutable attributes
 
-    if (type === 'Record') doc.createdBy = this.id; // Permanently links record to current staff
+    doc.createdBy = this.id; // Permanently link project or record to current staff
 
     if (type === 'Staff') { // Prevent assigning user account a higher privilege level than own
       const validRoles = roles.slice(0, roles.findIndex(role => role === this.role) + 1);
@@ -212,6 +208,72 @@ staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
   // Assign courses to staff (overwrites previous assignment)
   staff.assignedCourses = courses;
   return staff.save();
+};
+
+/**
+ * Class method for retrieving all projects for a lecturer's assigned courses.
+ * @returns {promise.<mongoose.model[]>}
+ */
+staffSchema.methods.getProjects = async function getProjects() {
+  if (!this.assignedCourses.length) return [];
+
+  // Strip students' private information and return results
+  return mongoose.model('Project')
+    .find({ course: { $in: this.assignedCourses } })
+    .populate('course submissions.student', privateAttrStr.student);
+};
+
+/**
+ * Class method for creating a new project for a course assigned to lecturer.
+ * @param {object[]} attributes Attributes to be assigned to the new project.
+ * @returns {promise.<mongoose.model>}
+ */
+staffSchema.methods.createProject = async function createProject(attributes) {
+  if (typeof attributes !== 'object') return { error: 'ValueError: attributes must be an object' };
+
+  // Check if specified course is assigned to this staff
+  if (!this.assignedCourses.map(obj => String(obj._id)).includes(String(attributes.course))
+  ) return { error: 'Access denied' };
+
+  // Prevent setting user-immutable attributes on new project
+  for (const key of immutables.Project) { delete attributes[key]; }
+  attributes.createdBy = this.id; // Permanently link the new project to the current staff
+
+  // Create and return the project
+  return mongoose.model('Project')(attributes).save();
+};
+
+/**
+ * Class method for adding comments and students' grades to projects.
+ * @example
+ * gradeProjects(id, { student : { score: 8, comment: 'Well done!' }})
+ * @param {ObjectId} id ID of project to be graded.
+ * @param {Object[]} scores Object with `student` ids that have a `score` and optional `comment`.
+ * @returns {promise.<mongoose.model>}
+ */
+staffSchema.methods.gradeProject = async function gradeProject(id, scores) {
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (typeof scores !== 'object') return { error: 'ValueError: courses must be an object' };
+  if (Object.keys(scores).map(key => ObjectId.isValid(key)).includes(false)
+  ) return { error: 'ValueError: Invalid id! All student IDs must be ObjectIds' };
+
+  // Retrieve project from database
+  const project = await mongoose.model('Project').findById(id);
+  if (!project) return { error: `ValueError: Project with id=${id} not found` };
+
+  // Check if project is owned by this staff
+  if (String(project.createdBy) !== String(this.id)) return { error: 'Access denied' };
+
+  // Prevent grading a project before its deadline
+  if (project.deadline > Date.now()) return { error: 'Projects can only be graded after their deadline' };
+
+  // Store scores and comments of students with submissions for the project in the database
+  project.submissions.map(submission => {
+    const grade = scores[String(submission.student)];
+    if (grade) submission.score = grade.score; submission.comment = grade.comment;
+    return submission;
+  });
+  return project.save();
 };
 
 // Staff class

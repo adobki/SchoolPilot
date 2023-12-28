@@ -5,6 +5,7 @@ const { ObjectId, enums, privileges } = require('./base');
 const { Faculty } = require('./faculty');
 const { Department } = require('./department');
 const { Course } = require('./course');
+const { Project } = require('./project');
 const { Record } = require('./record');
 
 const { genders, statuses } = enums.students;
@@ -143,5 +144,6 @@ module.exports = {
   Faculty,
   Department,
   Course,
+  Project,
   Record,
 };
