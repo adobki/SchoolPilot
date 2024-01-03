@@ -128,11 +128,10 @@ class StudentController {
       if (user.status !== statuses[1]) {
         return res.status(400).json({ error: 'User not verified' });
       }
-      // const isMatch = await bcrypt.compare(password, user.password);
-      // if (!isMatch) {
-      //   return res.status(401).json({ error: 'Incorrect password' });
-      // }
-      console.log(user);
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Incorrect password' });
+      }
       // set up Token based on the user authentication using this credentials
       const xToken = await authClient.createXToken(user._id.toString());
       if (!xToken) {
@@ -184,7 +183,9 @@ class StudentController {
     // delete the user token in redis
     try {
       await redisClient.del(`auth_${token}`);
-      res.sendStatus(204);
+      res.sendStatus(204).json({
+        message: 'Logout successful',
+      });
     } catch (error) {
       res.status(500).json({
         error: 'Redis is not alive',
