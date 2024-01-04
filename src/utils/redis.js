@@ -27,7 +27,7 @@ class RedisClient {
   async get(key) {
     const getAsync = util.promisify(this.client.get).bind(this.client);
     try {
-      if (!(await this.isAlive())) {
+      if (!await this.isAlive()) {
         throw new Error(msg);
       }
       const value = await getAsync(key);
@@ -39,7 +39,7 @@ class RedisClient {
 
   async set(key, value, duration) {
     try {
-      if (!(await this.isAlive())) {
+      if (!await this.isAlive()) {
         throw new Error(msg);
       }
       await this.client.set(key, value, 'EX', duration);
@@ -50,7 +50,7 @@ class RedisClient {
 
   async del(key) {
     try {
-      if (!(await this.isAlive())) {
+      if (!await this.isAlive()) {
         throw new Error(msg);
       }
       await this.client.del(key);

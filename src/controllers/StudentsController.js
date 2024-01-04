@@ -8,7 +8,6 @@
 const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
-const { Staff } = require('../models/staff');
 const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
@@ -73,13 +72,11 @@ class StudentController {
     if (!password) {
       return res.status(400).json({ error: 'Missing password' });
     }
-    // check if server is up before verifying
     try {
-      await dbClient.isAlive();
-    } catch (err) {
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-    try {
+      // check if server is up before verifying
+      if (!await dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
       const existingUser = await Student.findOne({ email });
       if (!existingUser) {
         return res.status(400).json({ error: 'Invalid token' });
@@ -152,7 +149,7 @@ class StudentController {
     }
     // update the user profile
     try {
-      const updatedObj = Staff.updateExisting(userID, 'Student', userData);
+      const updatedObj = Student.updateProfile(userData);
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update user profile' });
       }
