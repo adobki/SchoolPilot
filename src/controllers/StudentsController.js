@@ -8,6 +8,7 @@
 const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
+const { Staff } = require('../models/staff');
 const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
@@ -31,7 +32,9 @@ class StudentController {
       email,
     };
     try {
-      await dbClient.isAlive();
+      if (!await dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
       // check if the user already exists
       const existingUser = await Student.findOne({ email });
       if (!existingUser) {
@@ -70,6 +73,7 @@ class StudentController {
     if (!password) {
       return res.status(400).json({ error: 'Missing password' });
     }
+    // check if server is up before verifying
     try {
       await dbClient.isAlive();
     } catch (err) {
@@ -103,9 +107,63 @@ class StudentController {
     }
   }
 
-  // static async completeReg(req, res) {
-
-  // };
+  static async updateProfile(req, res) {
+    // verify token passed is linked to an active user
+    // extract the token from the header X-Token
+    const token = req.get('X-Token');
+    if (!token) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+      return;
+    }
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        error: 'update unsuccessful',
+        message: 'Mandatory field emial is missing',
+      });
+    }
+    // get the user id from the token
+    const userID = await authClient.getUserID(token);
+    if (!userID) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    // check if server is up before verifying
+    try {
+      await dbClient.isAlive();
+    } catch (err) {
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+    // validate if the token and object from the request are same
+    const userObj = await Student.findById({ _id: userID });
+    if (!userObj) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (userObj.email !== email) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    // update the user profile
+    // Get the updated attributes from the request body
+    const userData = {};
+    // extract all the attributes from the request body
+    for (const [key, value] of Object.entries(req.body)) {
+      userData[key] = value;
+    }
+    // update the user profile
+    try {
+      const updatedObj = Staff.updateExisting(userID, 'Student', userData);
+      if (!updatedObj) {
+        return res.status(400).json({ error: 'Failed to update user profile' });
+      }
+      res.status(201).json({
+        message: 'User profile updated successfully',
+        email: updatedObj.email,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update user profile' });
+    }
+  }
 
   static async login(req, res) {
     const { matricNo, password } = req.body;
@@ -120,13 +178,15 @@ class StudentController {
         matricNo,
         password,
       };
-      await dbClient.isAlive();
+      if (!dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
       const user = await Student.findOne({ matricNo });
       if (!user) {
         return res.status(400).json({ error: 'User not found' });
       }
       if (user.status !== statuses[1]) {
-        return res.status(400).json({ error: 'User not verified' });
+        return res.status(400).json({ error: 'User not authorized' });
       }
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
@@ -145,13 +205,8 @@ class StudentController {
         xToken,
       });
     } catch (err) {
-      if (err.message === 'User not found') {
-        res.status(404).json({ error: 'User not found' });
-      } else if (err.message === 'Incorrect password') {
-        res.status(401).json({ error: 'Incorrect password' });
-      } else {
-        res.status(500).json({ error: 'Failed to login' });
-      }
+      console.log(err);
+      res.status(500).json({ error: 'Failed to login' });
     }
   }
 
@@ -165,14 +220,18 @@ class StudentController {
       });
     }
     // retriee the basicAuthToken from reids
-    const key = `auth_${token}`;
-    const userID = await redisClient.get(key);
+    const userID = await authClient.getUserID(token);
     if (!userID) {
       res.status(401).json({
         error: 'Unauthorized',
       });
     }
     // retreive the user object base on the token
+    if (!dbClient.isAlive()) {
+      res.status(500).json({
+        error: 'Database is not alive',
+      });
+    }
     const user = await Student.findById(userID);
     if (!user) {
       res.status(401).json({
@@ -182,13 +241,14 @@ class StudentController {
     // continue with sign-out logic
     // delete the user token in redis
     try {
-      await redisClient.del(`auth_${token}`);
+      await authClient.deleteXToken(token);
       res.sendStatus(204).json({
         message: 'Logout successful',
       });
     } catch (error) {
       res.status(500).json({
-        error: 'Redis is not alive',
+        status: 'Redis is not alive',
+        error: error.message,
       });
     }
   }

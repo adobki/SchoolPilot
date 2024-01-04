@@ -4,6 +4,7 @@ const Redis = require('ioredis');
 const util = require('util');
 
 const url = process.env.REDIS_URL;
+const msg = 'Redis connection is not alive';
 
 class RedisClient {
   constructor() {
@@ -17,18 +18,18 @@ class RedisClient {
   }
 
   async isAlive() {
-    try {
-      await this.client.isReady();
-      return true;
-    } catch (error) {
+    if (!await this.client.ping()) {
       return false;
     }
+    return true;
   }
 
   async get(key) {
     const getAsync = util.promisify(this.client.get).bind(this.client);
     try {
-      await this.client.isAlive();
+      if (!(await this.isAlive())) {
+        throw new Error(msg);
+      }
       const value = await getAsync(key);
       return value;
     } catch (error) {
@@ -38,7 +39,9 @@ class RedisClient {
 
   async set(key, value, duration) {
     try {
-      await this.client.isAlive();
+      if (!(await this.isAlive())) {
+        throw new Error(msg);
+      }
       await this.client.set(key, value, 'EX', duration);
     } catch (error) {
       throw new Error(error);
@@ -47,7 +50,9 @@ class RedisClient {
 
   async del(key) {
     try {
-      await this.client.isAlive();
+      if (!(await this.isAlive())) {
+        throw new Error(msg);
+      }
       await this.client.del(key);
     } catch (error) {
       throw new Error(error);

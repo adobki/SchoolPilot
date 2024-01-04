@@ -10,10 +10,43 @@ class AuthController {
     const token = uuidv4();
     const key = `auth_${token}`;
     try {
-      await redisClient.set(key, userID, EXP);
+      await redisClient.set(key, userID, 'EX', EXP);
       return token;
     } catch (err) {
-      return null;
+      console.error('Error creating XToken:', err);
+      throw new Error('Failed to create XToken');
+    }
+  }
+
+  static async getUserID(xToken) {
+    try {
+      const userID = await redisClient.get(xToken);
+      return userID || null;
+    } catch (err) {
+      console.error('Error getting UserID:', err);
+      throw new Error('Failed to get UserID');
+    }
+  }
+
+  static async deleteXToken(xToken) {
+    try {
+      await redisClient.del(xToken);
+    } catch (err) {
+      console.error('Error deleting XToken:', err);
+      throw new Error('Failed to delete XToken');
+    }
+  }
+
+  static async verifyXToken(xToken) {
+    try {
+      const userID = await this.getUserID(xToken);
+      if (!userID) {
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error verifying XToken:', err);
+      throw new Error('Failed to verify XToken');
     }
   }
 }

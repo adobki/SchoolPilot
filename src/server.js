@@ -19,16 +19,22 @@ app.use(router);
 app.use(cors());
 // Initialize the database connection when the application starts
 async function startServer() {
+  // ensure Redis Conn is ready
+  const redisStatus = await redisClient.isAlive();
+  if (!redisStatus) {
+    console.error('Failed to initialize Redis');
+    process.exit(1);
+  }
   try {
-    // ensure the connection is oppened before starting the server
+    // ensure DB Conn is ready
     await dbClient.isAlive();
-    app.listen(port, () => {
-      console.log(`Server running on port ${port}: http://localhost:${port}`);
-    });
-    await redisClient.isAlive();
   } catch (error) {
     console.error('Failed to initialize the database:', error);
+    process.exit(1);
   }
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}: http://localhost:${port}`);
+  });
 }
 
 startServer();

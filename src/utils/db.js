@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const uri = process.env.MONGODB_URL;
+console.log(uri);
 
 class DBClient {
   constructor() {
@@ -22,9 +23,11 @@ class DBClient {
 
   async isAlive() {
     // Check if the Mongoose connection state is open
+    // Check if the Mongoose connection state is open
     if (await this.client) {
       return true;
-    } return false;
+    }
+    return false;
   }
 }
 
