@@ -149,7 +149,7 @@ class StudentController {
     }
     // update the user profile
     try {
-      const updatedObj = Student.updateProfile(userData);
+      const updatedObj = await userObj.updateProfile(userData);
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update user profile' });
       }
