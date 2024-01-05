@@ -16,6 +16,19 @@ const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
 
 class StudentController {
+  // check both redis and db health
+  static async healthCheck(req, res) {
+    const dbStatus = await dbClient.isAlive();
+    const redisStatus = await redisClient.isAlive();
+    if (!dbStatus) {
+      return res.status(500).json({ error: 'Database connection failed' });
+    }
+    if (!redisStatus) {
+      return res.status(500).json({ error: 'Redis connection failed' });
+    }
+    return res.status(200).json({ redisStatus, dbStatus });
+  }
+
   // signin a new student
   static async signin(req, res) {
     // signup a new student
