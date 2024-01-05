@@ -26,10 +26,6 @@ class StudentController {
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
     }
-    const userData = {
-      firstName,
-      email,
-    };
     try {
       if (!await dbClient.isAlive()) {
         return res.status(500).json({ error: 'Database connection failed' });
@@ -61,11 +57,12 @@ class StudentController {
   }
 
   static async activateProfile(req, res) {
-    // verify token
-    const { token, email, password } = req.body;
+    const { token } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Missing token' });
     }
+    const encryptToken = await authClient.checkConn(req, res);
+    const { email, password } = await authClient.decodeActivateProfileToken(encryptToken);
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
     }
@@ -92,7 +89,7 @@ class StudentController {
         return res.status(404).json({ error: user.error });
       }
       // setup basicAuth using token for this object
-      const xToken = await authClient.createXToken(user._id.toString());
+      const xToken = await authClient.createXToken(user.id);
       res.status(201).json({
         message: 'Account activated successfully',
         email: existingUser.email,
@@ -112,13 +109,12 @@ class StudentController {
       res.status(401).json({
         error: 'Unauthorized',
       });
-      return;
     }
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({
         error: 'update unsuccessful',
-        message: 'Mandatory field emial is missing',
+        message: 'Mandatory field email is missing',
       });
     }
     // get the user id from the token
@@ -163,7 +159,8 @@ class StudentController {
   }
 
   static async login(req, res) {
-    const { matricNo, password } = req.body;
+    const encryptToken = await authClient.checkConn(req, res);
+    const { matricNo, password } = await authClient.decodeLoginToken(encryptToken);
     if (!matricNo) {
       return res.status(400).json({ error: 'Missing Matric Number' });
     }
@@ -190,11 +187,10 @@ class StudentController {
         return res.status(401).json({ error: 'Incorrect password' });
       }
       // set up Token based on the user authentication using this credentials
-      const xToken = await authClient.createXToken(user._id.toString());
+      const xToken = await authClient.createXToken(user.id);
       if (!xToken) {
         return res.status(500).json({ error: 'Internal Server Error' });
       }
-      console.log(xToken);
       res.status(201).json({
         message: 'Login successful',
         id: user._id,
@@ -202,7 +198,6 @@ class StudentController {
         xToken,
       });
     } catch (err) {
-      console.log(err);
       res.status(500).json({ error: 'Failed to login' });
     }
   }
@@ -239,7 +234,7 @@ class StudentController {
     // delete the user token in redis
     try {
       await authClient.deleteXToken(token);
-      res.sendStatus(204).json({
+      res.status(201).json({
         message: 'Logout successful',
       });
     } catch (error) {

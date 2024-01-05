@@ -20,7 +20,8 @@ class AuthController {
 
   static async getUserID(xToken) {
     try {
-      const userID = await redisClient.get(xToken);
+      const key = `auth_${xToken}`;
+      const userID = await redisClient.get(key);
       return userID || null;
     } catch (err) {
       console.error('Error getting UserID:', err);
@@ -30,7 +31,9 @@ class AuthController {
 
   static async deleteXToken(xToken) {
     try {
-      await redisClient.del(xToken);
+      const key = `auth_${xToken}`;
+      await redisClient.del(key);
+      return;
     } catch (err) {
       console.error('Error deleting XToken:', err);
       throw new Error('Failed to delete XToken');
@@ -47,6 +50,59 @@ class AuthController {
     } catch (err) {
       console.error('Error verifying XToken:', err);
       throw new Error('Failed to verify XToken');
+    }
+  }
+
+  static async checkConn(req, res) {
+    // check authorization header
+    if (!req.headers.authorization) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    // check if Authorization header starts with Baic + space
+    if (!req.headers.authorization.startsWith('Basic ')) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    // get the token
+    const encryptToken = req.headers.authorization.split(' ')[1];
+    if (!encryptToken) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    return encryptToken;
+  }
+
+  static async decodeLoginToken(token) {
+    // decode the token to get the matricNo and password
+    try {
+      const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
+      if (decodedToken.length !== 2) {
+        return null;
+      }
+      const matricNo = decodedToken[0];
+      const password = decodedToken[1];
+      return { matricNo, password };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  static async decodeActivateProfileToken(token) {
+    // decode the token to get the email and password
+    try {
+      const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
+      if (decodedToken.length !== 2) {
+        return null;
+      }
+      const email = decodedToken[0];
+      const password = decodedToken[1];
+      return { email, password };
+    } catch (err) {
+      return null;
     }
   }
 }
