@@ -110,14 +110,7 @@ class StudentController {
         error: 'Unauthorized',
       });
     }
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({
-        error: 'update unsuccessful',
-        message: 'Mandatory field email is missing',
-      });
-    }
-    // get the user id from the token
+    // get the user id from the redis client
     const userID = await authClient.getUserID(token);
     if (!userID) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -131,9 +124,6 @@ class StudentController {
     // validate if the token and object from the request are same
     const userObj = await Student.findById({ _id: userID });
     if (!userObj) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    if (userObj.email !== email) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     // update the user profile
@@ -151,7 +141,7 @@ class StudentController {
       }
       res.status(201).json({
         message: 'User profile updated successfully',
-        email: updatedObj.email,
+        data: userData,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update user profile' });
