@@ -18,6 +18,7 @@ const authClient = require('./AuthController');
 class StudentController {
   // check both redis and db health
   static async healthCheck(req, res) {
+    // check both redis and db health
     const dbStatus = await dbClient.isAlive();
     const redisStatus = await redisClient.isAlive();
     if (!dbStatus) {
@@ -26,7 +27,11 @@ class StudentController {
     if (!redisStatus) {
       return res.status(500).json({ error: 'Redis connection failed' });
     }
-    return res.status(200).json({ redisStatus, dbStatus });
+    return res.status(200).json({
+      message: 'Server is up and running',
+      redisStatus,
+      dbStatus,
+    });
   }
 
   // signin a new student
