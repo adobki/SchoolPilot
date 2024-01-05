@@ -1,7 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable class-methods-use-this */
 const Redis = require('ioredis');
-const util = require('util');
 
 const url = process.env.REDIS_URL;
 const msg = 'Redis connection is not alive';
@@ -25,12 +24,11 @@ class RedisClient {
   }
 
   async get(key) {
-    const getAsync = util.promisify(this.client.get).bind(this.client);
     try {
       if (!await this.isAlive()) {
         throw new Error(msg);
       }
-      const value = await getAsync(key);
+      const value = await this.client.get(key);
       return value;
     } catch (error) {
       throw new Error(error);
