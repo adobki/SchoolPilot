@@ -10,7 +10,7 @@ class AuthController {
     const token = uuidv4();
     const key = `auth_${token}`;
     try {
-      await redisClient.set(key, userID, 'EX', EXP);
+      await redisClient.set(key, userID, EXP);
       return token;
     } catch (err) {
       console.error('Error creating XToken:', err);
