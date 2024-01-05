@@ -30,8 +30,6 @@ class RedisClient {
       if (!await this.isAlive()) {
         throw new Error(msg);
       }
-      console.log('Hi');
-      console.log(key);
       const value = await getAsync(key);
       return value;
     } catch (error) {
