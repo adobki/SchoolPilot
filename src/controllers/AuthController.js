@@ -1,10 +1,28 @@
 const { v4: uuidv4 } = require('uuid');
 const redisClient = require('../utils/redis');
+const dbClient = require('../utils/db');
 
 // token key expiration 24hrs
 const EXP = 60 * 60 * 24;
 
 class AuthController {
+  static async isHealth(req, res) {
+    // check both redis and db health
+    const dbStatus = await dbClient.isAlive();
+    const redisStatus = await redisClient.isAlive();
+    if (!dbStatus) {
+      return res.status(500).json({ error: 'Database connection failed' });
+    }
+    if (!redisStatus) {
+      return res.status(500).json({ error: 'Redis connection failed' });
+    }
+    return res.status(200).json({
+      message: 'Server is up and running',
+      redisStatus,
+      dbStatus,
+    });
+  }
+
   // create token base of user object credentials and store it in redis
   static async createXToken(userID) {
     const token = uuidv4();
