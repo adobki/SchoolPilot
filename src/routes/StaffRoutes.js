@@ -6,6 +6,6 @@ const staffRouter = express.Router();
 const staffController = require('../controllers/StaffController');
 
 // get the health check for redis and db connection
-staffRouter.get('/healthcheck', staffController.healthCheck);
+staffRouter.get('/status', staffController.status);
 
 module.exports = staffRouter;

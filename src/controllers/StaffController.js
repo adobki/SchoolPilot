@@ -4,18 +4,16 @@
 // bcrypt for password hashing
 const bcrypt = require('bcrypt');
 // import the user model
-const { Student } = require('../models/student');
 const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 
-const { statuses } = enums.students;
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
 
 class StaffController {
   // check both redis and db health
-  static async healthCheck(req, res) {
+  static async status(req, res) {
     // check both redis and db health
     await authClient.isHealth(req, res);
   }
