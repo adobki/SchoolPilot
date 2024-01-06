@@ -17,7 +17,7 @@ const authClient = require('./AuthController');
 
 class StudentController {
   // check both redis and db health
-  static async status(req, res) {
+  static async healthCheck(req, res) {
     // check both redis and db health
     await authClient.isHealth(req, res);
   }

@@ -5,7 +5,7 @@ const studentRouter = express.Router();
 // import the controller
 const studentController = require('../controllers/StudentsController');
 
-studentRouter.get('/status', studentController.status);
+studentRouter.get('/healthcheck', studentController.healthCheck);
 studentRouter.post('/login', studentController.login);
 studentRouter.post('/logout', studentController.logout);
 studentRouter.post('/updateprofile', studentController.updateProfile);

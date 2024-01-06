@@ -16,8 +16,9 @@ class AuthController {
     if (!redisStatus) {
       return res.status(500).json({ error: 'Redis connection failed' });
     }
+    const portal = req.originalUrl.split('/')[3];
     return res.status(200).json({
-      url: req.originalUrl,
+      portal,
       message: 'Server is up and running',
       redisStatus,
       dbStatus,
