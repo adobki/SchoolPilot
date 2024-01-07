@@ -10,7 +10,7 @@ const router = express.Router();
 // pre-flight request
 router.options('*', cors());
 
-router.use('/api/v1/studentportal', studentRouter);
-router.use('/api/v1/staffportal', staffRouter);
+router.use('/api/v1/studentportal', cors(), studentRouter);
+router.use('/api/v1/staffportal', cors(), staffRouter);
 
 module.exports = router;

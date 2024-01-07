@@ -9,11 +9,11 @@ const studentController = require('../controllers/StudentsController');
 // preflight request
 studentRouter.options('*', cors());
 
-studentRouter.get('/healthcheck', studentController.healthCheck);
-studentRouter.post('/login', studentController.login);
-studentRouter.post('/logout', studentController.logout);
-studentRouter.post('/updateprofile', studentController.updateProfile);
-studentRouter.post('/signin', studentController.signin);
-studentRouter.post('/activateprofile', studentController.activateProfile);
+studentRouter.get('/healthcheck', cors(), studentController.healthCheck);
+studentRouter.post('/login', cors(), studentController.login);
+studentRouter.post('/logout', cors(), studentController.logout);
+studentRouter.post('/updateprofile', cors(), studentController.updateProfile);
+studentRouter.post('/signin', cors(), studentController.signin);
+studentRouter.post('/activateprofile', cors(), studentController.activateProfile);
 
 module.exports = studentRouter;

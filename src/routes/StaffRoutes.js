@@ -10,6 +10,6 @@ const staffController = require('../controllers/StaffController');
 staffRouter.options('*', cors());
 
 // get the health check for redis and db connection
-staffRouter.get('/healthcheck', staffController.healthCheck);
+staffRouter.get('/healthcheck', cors(), staffController.healthCheck);
 
 module.exports = staffRouter;
