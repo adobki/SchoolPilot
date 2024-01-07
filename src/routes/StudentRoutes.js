@@ -5,6 +5,12 @@ const studentRouter = express.Router();
 // import the controller
 const studentController = require('../controllers/StudentsController');
 
+// allow cors
+studentRouter.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+})
+
 studentRouter.get('/healthcheck', studentController.healthCheck);
 studentRouter.post('/login', studentController.login);
 studentRouter.post('/logout', studentController.logout);

@@ -18,7 +18,7 @@ app.use(router);
 
 // it should enable CORS
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:63342'],
+  origin: "*", // allow all origins for now
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   preflightContinue: false,
   optionsSuccessStatus: 204,

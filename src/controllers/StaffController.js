@@ -17,6 +17,22 @@ class StaffController {
     // check both redis and db health
     await authClient.isHealth(req, res);
   }
+
+  // create a new object for the specific model
+  static async createNewObject(req, res) {
+    // check http credentials
+    const encryptToken = await authClient.checkConn(req, res);
+    // decode token to get userObj
+    const userObj = authClient.decodeLoginToken(token);
+    // check if userObj is valid
+    if (!userObj) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    // create new object
+
+
+    
+  }
 }
 
 module.exports = StaffController;

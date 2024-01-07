@@ -5,6 +5,11 @@ const staffRouter = express.Router();
 // import the controller
 const staffController = require('../controllers/StaffController');
 
+// allow cors
+staffRouter.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+})
 // get the health check for redis and db connection
 staffRouter.get('/healthcheck', staffController.healthCheck);
 
