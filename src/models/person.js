@@ -58,9 +58,7 @@ function validatePerson() {
  * @returns {String} "`firstName` + [`middleName` + ]`lastName`"
  */
 function getFullName() {
-  const { firstName, middleName, lastName } = this;
-  if (middleName) return [firstName, middleName, lastName].join(' ');
-  return [firstName, lastName].join(' ');
+  return [this.firstName, this.middleName, this.lastName].join(' ');
 }
 
 /**
@@ -84,7 +82,7 @@ async function updateProfile(attributes) {
  */
 async function forgotPassword() {
   this.resetPwd = true;
-  this.resetTTL = Date.now() + (1000 * 60 * 30); // 30 minutes validity
+  this.resetTTL = Date.now() + (1000 * 60 * 5); // 5 minutes validity
   this.resetOTP = uuid().slice(-7, -1); // random 6-character token
   await this.save();
   return this.resetOTP;
@@ -99,7 +97,7 @@ async function forgotPassword() {
  * @returns {promise.<mongoose.Model>} User object with updated password.
  */
 async function resetPassword(OTP, newPassword) {
-  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case insensitive token
+  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case-insensitive token
     if (this.resetTTL < Date.now()) return { error: 'ValueError: OTP has expired' };
     this.password = newPassword;
     this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;

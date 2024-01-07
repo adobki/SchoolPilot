@@ -5,6 +5,7 @@ const { ObjectId, enums, privileges, immutables } = require('./base');
 const { person, methods, privateAttr, privateAttrStr } = require('./person');
 
 const { titles, roles, models } = enums.staff;
+const { statuses, levels } = enums.courses;
 const { HOD, Dean, Admin, SuperAdmin } = privileges;
 
 // Staff properties
@@ -39,9 +40,9 @@ staffSchema.virtual('fullname').get(methods.getFullName);
  * priviledge to create them, except `Project` and `Record`, which require that the associated
  * course must be assigned to the staff. Therefore, only the lecturer(s) for a specific course
  * can post students' results and projects for same, and only admins can create the other types.
- * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
- * @param {object} attributes Attributes to be assigned to the new object/document.
- * @returns {promise.<mongoose.Model>}
+ * @param {String} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
+ * @param {Object} attributes Attributes to be assigned to the new object/document.
+ * @returns {Promise.<mongoose.Model>}
  */
 staffSchema.methods.createNew = async function createNew(type, attributes) {
   if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
@@ -77,9 +78,9 @@ staffSchema.methods.createNew = async function createNew(type, attributes) {
  * updated by the staff who created them. Therefore, only the creator of a project or record
  * can edit it, and only admins can edit the other types.
  * @param {ObjectId} id ID of object to be updated.
- * @param {string} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
- * @param {object} attributes Attributes to be assigned to the object/document.
- * @returns {promise.<mongoose.model>}
+ * @param {String} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
+ * @param {Object} attributes Attributes to be assigned to the object/document.
+ * @returns {Promise.<mongoose.model>}
  */
 staffSchema.methods.updateExisting = async function updateExisting(id, type, attributes) {
   if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
@@ -92,9 +93,9 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
 
   if (type === 'Project' || type === 'Record') {
     // Check if project or record is owned by this staff
-    if (String(obj.createdBy) !== String(this.id)) return { error: 'Access denied' };
+    if (String(obj.createdBy) !== this.id) return { error: 'Access denied' };
     // Prevent updating approved records
-    if (obj.status === enums.courses.statuses.slice(-1)[0]
+    if (obj.status === statuses.slice(-1)[0]
     ) return { error: 'Access denied! Approved records can not be updated' };
 
     // Check staff privileges before proceeeding with other types
@@ -102,7 +103,7 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
 
   if (type === 'Staff') {
     // Prevent updating own account with this method (must use updateProfile method)
-    if (String(obj.id) === String(this.id)) return { error: 'Access denied! Use `updateProfile` for self' };
+    if (obj.id === this.id) return { error: 'Access denied! Use `updateProfile` for self' };
     // Prevent assigning user account a higher privilege level than own
     if (attributes.role) {
       const validRoles = roles.slice(0, roles.findIndex(role => role === this.role) + 1);
@@ -123,9 +124,9 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
  * Class method for creating multiple objects/documents in the database simultaneously. Uses the
  * Mongoose `insertMany` method to optimise insertion. However, insertions are done in batches
  * of 500 objects to reduce memory/buffer issues.
- * @param {string} type Model: `Record`, `Course`, `Student`, `Staff`, `Department`, or `Faculty`.
- * @param {object[]} attributes Array of attributes to be assigned per object/document.
- * @returns {promise.<object>} Object with two properties: `inserted` docs array and `failed` objects array.
+ * @param {String} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
+ * @param {Object[]} attributes Array of attributes to be assigned per object/document.
+ * @returns {Promise.<Object>} Object with 2 properties: `inserted` docs & `failed` objects arrays.
 */
 staffSchema.methods.createMany = async function createMany(type, attributes) {
   if (!this.privileges.createMany) return { error: 'Access denied' }; // Check staff privileges
@@ -192,7 +193,7 @@ staffSchema.methods.createMany = async function createMany(type, attributes) {
  * Unassign courses by sending a slice or an empty array.
  * @param {ObjectId} id ID of lecturer to be assigned the courses.
  * @param {ObjectId[]} courses Array of courses to be assigned.
- * @returns {promise.<mongoose.model>}
+ * @returns {Promise.<mongoose.model>}
  */
 staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
   if (!this.privileges.assignCourse) return { error: 'Access denied' };
@@ -244,7 +245,7 @@ staffSchema.methods.createProject = async function createProject(attributes) {
 };
 
 /**
- * Class method for adding comments and students' grades to projects.
+ * Class method for adding comments and students' scores to projects.
  * @example
  * gradeProjects(id, { student : { score: 8, comment: 'Well done!' }})
  * @param {ObjectId} id ID of project to be graded.
@@ -258,11 +259,12 @@ staffSchema.methods.gradeProject = async function gradeProject(id, scores) {
   ) return { error: 'ValueError: Invalid id! All student IDs must be ObjectIds' };
 
   // Retrieve project from database
-  const project = await mongoose.model('Project').findById(id);
+  const project = await mongoose.model('Project').findById(id)
+    .populate('course submissions.student', privateAttrStr.student);
   if (!project) return { error: `ValueError: Project with id=${id} not found` };
 
   // Check if project is owned by this staff
-  if (String(project.createdBy) !== String(this.id)) return { error: 'Access denied' };
+  if (String(project.createdBy) !== this.id) return { error: 'Access denied' };
 
   // Prevent grading a project before its deadline
   if (project.deadline > Date.now()) return { error: 'Projects can only be graded after their deadline' };

@@ -26,13 +26,12 @@ const HOD = {
   approveResult: true,
 };
 const Dean = {
-  approveResult: true,
   assignCourse: true,
 };
 const Admin = {
+  assignCourse: true,
   createNew: true,
   updateExisting: true,
-  assignCourse: true,
 };
 const SuperAdmin = {
   createMany: true,
@@ -54,14 +53,16 @@ const immutableRecord = [...immutableGlobal, 'createdBy', 'status'];
 const immutablePerson = [...immutableGlobal, 'status', 'password', 'resetPwd', 'resetTTL', 'resetOTP'];
 const immutableStudent = [...immutablePerson, 'registeredCourses'];
 const immutableStaff = [...immutablePerson, 'assignedCourses'];
-const immutable = [...new Set(
-  [immutableDepartment, immutableRecord, immutableStaff, immutableStudent].flatMap(x => x),
-)];
+const immutable = [...new Set([
+  ...immutableDepartment, ...immutableProject, ...immutableRecord,
+  ...immutableStaff, ...immutableStudent,
+])];
+
 const immutables = {
   all: immutable,
-  Faculty: immutableGlobal,
   Course: immutableGlobal,
   Project: immutableProject,
+  Faculty: immutableDepartment,
   Department: immutableDepartment,
   Record: immutableRecord,
   Staff: immutableStaff,

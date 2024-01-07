@@ -8,7 +8,7 @@ const project = {
   name: { type: String, required: true, select: true },
   info: { type: String, required: true, select: true },
   course: { type: ObjectId, ref: 'Course', required: true },
-  year: { type: Number, required: true, select: true },
+  year: { type: Number, required: true, select: true, default: new Date().getFullYear() },
   deadline: { type: Date, required: true, select: true },
   submissions: [{
     student: { type: ObjectId, ref: 'Student', required: true },

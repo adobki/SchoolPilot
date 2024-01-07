@@ -106,7 +106,7 @@ studentSchema.methods.registerCourses = async function registerCourses(courseIds
   const courses = await this.getAvailableCourses(semester);
   if (courses.error) return { error: courses.error };
   const availableIds = [...courses.department.courses, ...courses.faculty.courses]
-    .map(course => String(course._id));
+    .map(course => course.id);
 
   // Validate given course IDs against available IDs
   const validIds = [...new Set(courseIds)].reduce((results, id) => {
@@ -167,7 +167,7 @@ studentSchema.methods.submitProject = async function submitProject(id, answer) {
   if (project.deadline < Date.now()) return { error: 'Project is past its deadline' };
 
   // Submit student's answer or update previous submission if any
-  const submitted = project.submissions.findIndex(sub => String(sub.student) === String(this.id));
+  const submitted = project.submissions.findIndex(sub => sub.student === this.id);
   if (submitted > -1) project.submissions[submitted] = { student: this.id, answer };
   else project.submissions.push({ student: this.id, answer });
 
