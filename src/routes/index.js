@@ -3,8 +3,8 @@ const cors = require('cors')
 // import the router for each controller
 const studentRouter = require('./StudentRoutes');
 const staffRouter = require('./StaffRoutes');
-const genRouter = require('./GeneralRoutes');
-const { swaggerUi, specs } = require('../utils/swagger');
+const genRouter = require('./GeneralRoutes.js');
+// const { swaggerUi, specs } = require('../utils/swagger');
 // it should enable CORS
 const corsOptions = {
   origin: '*', // allow all origins for now
@@ -20,8 +20,8 @@ const router = express.Router();
 
 router.use(cors( corsOptions ));
 
-// Serve Swagger UI documentation
-router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+// // Serve Swagger UI documentation
+// router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 router.use('/api/v1/healthcheck', genRouter);
 router.use('/api/v1/studentportal', studentRouter);

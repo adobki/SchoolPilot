@@ -1,17 +1,20 @@
 // create the Express server:
 const express = require('express');
 // router are used to separate the routes from the main server file
-const staffRouter = express.Router();
+const genRouter = express.Router();
 // import the controller
-const staffController = require('../controllers/StaffController');
+const genController = require('../controllers/GeneralController');
+
+// swagger docs
 
 /** GETMethods */
 /**
  * @openapi
- * '/api/v1/staffportal/healthcheck':
+ * '/api/v1/healthcheck':
  *  get:
  *     tags:
- *     - Staff Controller
+ *     - General Controller
+ *     summary: check the health of the redis server and the database
  *     responses:
  *      200:
  *        description: Successful
@@ -19,6 +22,6 @@ const staffController = require('../controllers/StaffController');
  *        description: Internal Server Error
  */
 // get the health check for redis and db connection
-staffRouter.get('/healthcheck', staffController.healthCheck);
+genRouter.get('/', genController.healthCheck);
 
-module.exports = staffRouter;
+module.exports = genRouter;

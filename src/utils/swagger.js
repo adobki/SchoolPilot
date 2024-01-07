@@ -6,11 +6,12 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'School Portal API',
+      title: 'SchoolPilot API',
       version: '1.0.0',
-      description: 'Documentation for School Portal API',
+      description: 'Documentation for SchoolPilot Management System API',
     },
   },
+  apis: ['./src/routes/*.js'],
   servers: [
     {
       url: 'https://schoolpilot-8zfm.onrender.com/',
@@ -21,7 +22,6 @@ const options = {
       description: 'local server',
     }
   ],
-  apis: ['../src/routes/*.js'],
 };
 
 const specs = swaggerJsDoc(options);
