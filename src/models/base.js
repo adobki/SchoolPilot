@@ -68,10 +68,48 @@ const immutables = {
   Student: immutableStudent,
 };
 
+// Private attributes to be omitted from returned models in staff/student methods
+const allPrivateAttr = { __v: 0, createdAt: 0 }; // , // updatedAt: 0 };
+const passwordAttr = { password: 0, resetPwd: 0, resetTTL: 0, resetOTP: 0 };
+const personPrivateAttr = {
+  ...allPrivateAttr,
+  ...passwordAttr,
+  status: 0,
+  DOB: 0,
+  stateOfOrigin: 0,
+  LGA: 0,
+  phone: 0,
+  role: 0,
+};
+const staffPrivateAttr = { ...personPrivateAttr, privileges: 0, assignedCourses: 0 };
+const studentPrivateAttr = { ...personPrivateAttr, projects: 0, registeredCourses: 0 };
+
+// Concatenated version of private attribues for use in Mongoose project() method
+const allPrivateAttrStr = ['', ...Object.keys(allPrivateAttr)].join(' -').trim();
+const personPrivateAttrStr = ['', ...Object.keys(personPrivateAttr)].join(' -').trim();
+const staffPrivateAttrStr = ['', ...Object.keys(staffPrivateAttr)].join(' -').trim();
+const studentPrivateAttrStr = ['', ...Object.keys(studentPrivateAttr)].join(' -').trim();
+
+const privateAttr = {
+  privateAttr: {
+    all: allPrivateAttr,
+    person: passwordAttr,
+    staff: staffPrivateAttr,
+    student: studentPrivateAttr,
+  },
+  privateAttrStr: {
+    all: allPrivateAttrStr,
+    person: personPrivateAttrStr,
+    staff: staffPrivateAttrStr,
+    student: studentPrivateAttrStr,
+  },
+};
+
 module.exports = {
   dbClient,
   ObjectId: mongoose.Types.ObjectId,
   enums,
   privileges,
   immutables,
+  privateAttr,
 };

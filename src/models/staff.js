@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums, privileges, immutables } = require('./base');
-const { person, methods, privateAttrStr, mutableAttr } = require('./person');
+const { person, methods, privateAttr, privateAttrStr } = require('./person');
 
 const { titles, roles, models } = enums.staff;
 const { HOD, Dean, Admin, SuperAdmin } = privileges;
@@ -281,7 +281,6 @@ const Staff = mongoose.model('Staff', staffSchema);
 
 module.exports = {
   Staff,
-  mutableAttr,
   immutables,
   enums,
 };

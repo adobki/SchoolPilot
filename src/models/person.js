@@ -1,7 +1,9 @@
 // Person: Base class and methods for all user account types
 
 const { v4: uuid } = require('uuid');
-const { ObjectId, enums, privileges } = require('./base');
+const {
+  ObjectId, enums, privileges, privateAttr: { privateAttr, privateAttrStr },
+} = require('./base');
 const { Faculty } = require('./faculty');
 const { Department } = require('./department');
 const { Course } = require('./course');
@@ -30,20 +32,6 @@ const person = {
   resetTTL: Date,
   resetOTP: String,
 };
-const mutableAttr = [
-  'email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture',
-];
-const privateAttr = [
-  'status', 'DOB', 'stateOfOrigin', 'LGA', 'phone', 'role', '__v', 'createdAt',
-  'updatedAt', 'password', 'resetPwd', 'resetTTL', 'resetOTP',
-];
-const personPrivateAttr = privateAttr.slice(-4); // Password/reset fields
-const staffPrivateAttr = [...privateAttr, 'privileges', 'assignedCourses'];
-const studentPrivateAttr = [...privateAttr, 'registeredCourses', 'projects'];
-const privateAttrStr = ['', ...privateAttr.slice(-7, -4)].join(' -').trim();
-const personPrivateAttrStr = ['', ...personPrivateAttr].join(' -').trim();
-const staffPrivateAttrStr = ['', ...staffPrivateAttr].join(' -').trim();
-const studentPrivateAttrStr = ['', ...studentPrivateAttr].join(' -').trim();
 
 /**
  * Validations and constraints for user accounts. Enforces some
@@ -81,6 +69,7 @@ function getFullName() {
  * @returns {promise.<mongoose.Model>} User object with valid updated attributes.
  */
 async function updateProfile(attributes) {
+  const mutableAttr = ['email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture'];
   for (const [key, val] of Object.entries(attributes)) {
     if (mutableAttr.includes(key)) this[key] = val;
   }
@@ -128,19 +117,8 @@ module.exports = {
     forgotPassword,
     resetPassword,
   },
-  privateAttr: {
-    all: personPrivateAttr.slice(-4),
-    person: personPrivateAttr,
-    staff: staffPrivateAttr,
-    student: studentPrivateAttr,
-  },
-  privateAttrStr: {
-    all: privateAttrStr,
-    person: personPrivateAttrStr,
-    staff: staffPrivateAttrStr,
-    student: studentPrivateAttrStr,
-  },
-  mutableAttr,
+  privateAttr,
+  privateAttrStr,
   Faculty,
   Department,
   Course,

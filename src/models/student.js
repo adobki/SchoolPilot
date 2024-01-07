@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums } = require('./base');
-const { person, methods, privateAttrStr, mutableAttr } = require('./person');
+const { person, methods, privateAttrStr } = require('./person');
 
 const { levels, types, standings, roles } = enums.students;
 const { semesters } = enums.courses;
@@ -179,6 +179,5 @@ const Student = mongoose.model('Student', studentSchema);
 
 module.exports = {
   Student,
-  mutableAttr,
   enums,
 };
