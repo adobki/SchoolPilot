@@ -1,0 +1,11 @@
+// create the Express server:
+const express = require('express');
+// router are used to separate the routes from the main server file
+const genRouter = express.Router();
+// import the controller
+const genController = require('../controllers/GeneralController');
+
+// get the health check for redis and db connection
+genRouter.get('/', genController.healthCheck);
+
+module.exports = genRouter;

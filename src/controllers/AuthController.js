@@ -25,6 +25,29 @@ class AuthController {
     });
   }
 
+  static async genHealth (req, res, portals) {
+    // loop through each url in the list
+    const data = [];
+    for (const portal of portals) {
+      // check both redis and db health
+      const dbStatus = await dbClient.isAlive();
+      const redisStatus = await redisClient.isAlive();
+      if (!dbStatus) {
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
+      if (!redisStatus) {
+        return res.status(500).json({ error: 'Redis connection failed' });        
+      }
+      data.push({
+        portal,
+        message: 'Server is up and running',
+        redisStatus,
+        dbStatus,
+      });
+    }
+    return res.status(200).json(data);
+  }
+
   // create token base of user object credentials and store it in redis
   static async createXToken(userID) {
     const token = uuidv4();
