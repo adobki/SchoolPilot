@@ -1,15 +1,13 @@
 // create the Express server:
 const express = require('express');
+const cors = require('cors')
 // router are used to separate the routes from the main server file
 const studentRouter = express.Router();
 // import the controller
 const studentController = require('../controllers/StudentsController');
 
-// allow cors
-studentRouter.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-})
+// preflight request
+studentRouter.options('*', cors());
 
 studentRouter.get('/healthcheck', studentController.healthCheck);
 studentRouter.post('/login', studentController.login);

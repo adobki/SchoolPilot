@@ -26,7 +26,7 @@ const corsOptions = {
   allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
 };
 
-app.options("*", cors(corsOptions)); // pre-flight request
+app.options("*", cors(corsOptions)); // pre-flight request accross all routes
 
 app.use(cors(corsOptions));
 // Initialize the database connection when the application starts
