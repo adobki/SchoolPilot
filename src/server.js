@@ -25,6 +25,9 @@ const corsOptions = {
   credentials: true,
   allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
 };
+
+app.options("*", cors(corsOptions)); // pre-flight request
+
 app.use(cors(corsOptions));
 // Initialize the database connection when the application starts
 async function startServer() {
