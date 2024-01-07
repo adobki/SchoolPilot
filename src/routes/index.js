@@ -4,13 +4,22 @@ const cors = require('cors')
 const studentRouter = require('./StudentRoutes');
 const staffRouter = require('./StaffRoutes');
 
+// it should enable CORS
+const corsOptions = {
+  origin: '*', // allow all origins for now
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true,
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
+};
+
 // router are used to separate the routes from the main server file
 const router = express.Router();
 
-// pre-flight request
-router.options('*', cors());
+router.use(cors( corsOptions ));
 
-router.use('/api/v1/studentportal', cors(), studentRouter);
-router.use('/api/v1/staffportal', cors(), staffRouter);
+router.use('/api/v1/studentportal', studentRouter);
+router.use('/api/v1/staffportal', staffRouter);
 
 module.exports = router;

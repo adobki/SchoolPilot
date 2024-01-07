@@ -3,7 +3,6 @@
 //  create the Express server:
 require('./utils/config'); // Make sure this is at the top
 const express = require('express');
-const cors = require('cors');
 const app = express();
 const port = process.env.EXPRESS_PORT || 3500;
 const router = require('./routes/index');
@@ -16,19 +15,6 @@ app.use(express.json());
 // it should load all routes from the file routes/index.js
 app.use(router);
 
-// it should enable CORS
-const corsOptions = {
-  origin: "*", // allow all origins for now
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-  credentials: true,
-  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
-};
-
-app.options("*", cors()); // pre-flight request accross all routes
-
-app.use(cors());
 // Initialize the database connection when the application starts
 async function startServer() {
   // ensure Redis Conn is ready

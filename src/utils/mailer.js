@@ -9,10 +9,7 @@ class MailClient {
         user: 'schoolpilot.mgt@gmail.com',
         pass: 'fvhn lfcb upap wcob',
       },
-      debug: true,
-      logger: true,
     });
-    // at the point of producton we should set debug and logger to false
   }
 
   async sendToken(obj) {
