@@ -240,6 +240,134 @@ class StudentController {
       });
     }
   }
+
+  static async setResetPassword(req, res) {
+    // check if the email is valid
+    const { email, matricNo } = req.body;
+    if (!email && !matricNo) {
+      res.status(400).json({
+        error: 'Missing email or matricNo',
+      });
+    }
+    // Code to handle when either email or matricNo is provided
+    if (email && matricNo) {
+      // Both email and matricNo are provided
+      const user = await Student.findOne({ email, matricNo });
+      if (!user) {
+        res.status(404).json({
+          error: 'User not found',
+        });
+        return;
+      }
+      if (user.status !== statuses[1]) {
+        res.status(400).json({
+          error: 'User not authorized',
+        });
+        return;
+      }
+      // Generate and send password reset token
+      const resetToken = await user.forgotPassword();
+      await mailClient.sendToken(user);
+      res.status(201).json({
+        message: 'Password reset token sent successfully',
+        email: existingUser.email,
+        resetToken,
+      });
+    }
+    else if (email) {
+      // Only email is provided
+      const user = await Student.findOne({ email });
+      if (!user) {
+        res.status(404).json({
+          error: 'User not found',
+        });
+        return;
+      }
+      if (user.status !== statuses[1]) {
+        res.status(400).json({
+          error: 'User not authorized',
+        });
+        return;
+      }
+      // Generate and send password reset token
+      const resetToken = await user.forgotPassword();
+      await mailClient.sendToken(user);
+      res.status(201).json({
+        message: 'Password reset token sent successfully',
+        email: user.email,
+        resetToken,
+      });
+    }
+    else if (matricNo) {
+      // Only matricNo is provided
+      const user = await Student.findOne({ matricNo });
+      if (!user) {
+        res.status(404).json({
+          error: 'User not found',
+        });
+        return;
+      }
+      if (user.status !== statuses[1]) {
+        res.status(400).json({
+          error: 'User not authorized',
+        });
+        return;
+      }
+      // Generate and send password reset token
+      const resetToken = await user.forgotPassword();
+      await mailClient.sendToken(user);
+      res.status(200).json({
+        message: 'Password reset token sent',
+        email: user.email,
+        resetToken,
+      });
+    }
+  }
+
+  static async setNewPassword(req, res) {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Missing token' });
+    }
+    const encryptToken = await authClient.checkConn(req, res);
+    const { email, password } = await authClient.decodeActivateProfileToken(encryptToken);
+    if (!email) {
+      return res.status(400).json({ error: 'Missing email' });
+    }
+    if (!password) {
+      return res.status(400).json({ error: 'Missing password' });
+    }
+    try {
+      // check if server is up before verifying
+      if (!await dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
+      const existingUser = await Student.findOne({ email });
+      if (!existingUser) {
+        return res.status(400).json({ error: 'Invalid token' });
+      }
+      // check if user object profile is already activated, if true redirect to login instead
+      if (existingUser.status !== statuses[1]) {
+        return res.status(400).json({ error: 'User not verified\nPlease signin' });
+      }
+      // hash the password using bcrypt
+      const hashedPwd = await bcrypt.hash(password, 12);
+      const user = await existingUser.resetPassword(token, hashedPwd);
+      if (user.error) {
+        return res.status(404).json({ error: user.error });
+      }
+      // setup basicAuth using token for this object
+      const xToken = await authClient.createXToken(user.id);
+      res.status(201).json({
+        message: 'Password reset successfully',
+        email: existingUser.email,
+        xToken,
+      });
+      // needed for the user profile activation
+    } catch (err) {
+      return res.status(400).json({ error: err });
+    }
+  }
 }
 
 module.exports = StudentController;

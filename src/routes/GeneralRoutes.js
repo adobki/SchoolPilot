@@ -14,12 +14,15 @@ const genController = require('../controllers/GeneralController');
  *  get:
  *     tags:
  *     - General Controller
- *     summary: check the health of the redis server and the database
+ *     summary: check the health of the redis server and the database-
  *     responses:
  *      200:
  *        description: Health Check Successful
  *      500:
  *        description: Health Check Failed
+ *     404:
+ *        description: Not Found
+ * 
  */
 // get the health check for redis and db connection
 genRouter.get('/', genController.healthCheck);

@@ -11,5 +11,7 @@ studentRouter.post('/logout', studentController.logout);
 studentRouter.post('/updateprofile', studentController.updateProfile);
 studentRouter.post('/signin', studentController.signin);
 studentRouter.post('/activateprofile', studentController.activateProfile);
+studentRouter.post('/resetpassword', studentController.setResetPassword);
+studentRouter.post('/newpassword', studentController.setNewPassword);
 
 module.exports = studentRouter;
