@@ -17,9 +17,9 @@ const genController = require('../controllers/GeneralController');
  *     summary: check the health of the redis server and the database
  *     responses:
  *      200:
- *        description: Successful
+ *        description: Health Check Successful
  *      500:
- *        description: Internal Server Error
+ *        description: Health Check Failed
  */
 // get the health check for redis and db connection
 genRouter.get('/', genController.healthCheck);

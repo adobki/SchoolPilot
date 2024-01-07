@@ -10,18 +10,23 @@ const options = {
       version: '1.0.0',
       description: 'Documentation for SchoolPilot Management System API',
     },
+    servers: [
+      {
+        url: 'https://schoolpilot-8zfm.onrender.com/',
+        description: 'Dev-Production server',
+      },
+      {
+        url: 'https://schoolpilot.onrender.com/',
+        description: 'Production server',
+      },
+      {
+        url: 'http://localhost:4000/',
+        description: 'local server',
+      }
+    ],
   },
   apis: ['./src/routes/*.js'],
-  servers: [
-    {
-      url: 'https://schoolpilot-8zfm.onrender.com/',
-      description: 'Production server',
-    },
-    {
-      url: 'http://localhost:4000/',
-      description: 'local server',
-    }
-  ],
+  
 };
 
 const specs = swaggerJsDoc(options);
