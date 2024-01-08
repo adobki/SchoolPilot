@@ -75,6 +75,17 @@ async function updateProfile(attributes) {
 }
 
 /**
+ * Method for changing a user's password.
+ * @param {string} newPassword New password provided by the user.
+ * @returns {promise.<mongoose.Model>} User object with updated password.
+ */
+async function changePassword(newPassword) {
+  this.password = newPassword;
+  this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
+  return this.save();
+}
+
+/**
  * Method for initiating password reset when a user forgets their password
  * or doesn't have one yet (at account activation). This creates a time-
  * bound OTP/token for the current account, then stores and returns it.
@@ -114,6 +125,7 @@ module.exports = {
     updateProfile,
     forgotPassword,
     resetPassword,
+    changePassword,
   },
   privateAttr,
   privateAttrStr,
