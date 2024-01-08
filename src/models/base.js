@@ -24,12 +24,14 @@ const enums = {
 // Privileges for staff accounts by role
 const HOD = {
   approveResult: true,
+  assignCourse: true,
 };
 const Dean = {
-  assignCourse: true,
+  setCourses: true,
 };
 const Admin = {
   assignCourse: true,
+  setCourses: true,
   createNew: true,
   updateExisting: true,
 };
