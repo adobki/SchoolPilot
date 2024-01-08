@@ -241,36 +241,143 @@ staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
 };
 
 /**
- * Class method for retrieving all projects for a lecturer's assigned courses.
- * @returns {promise.<mongoose.model[]>}
+ * Class method for getting all available courses by level in a faculty/department.
+ * This data is used by students for course registration, and is available to all staff.
+ * @param {ObjectId} _id ID of department or faculty.
+ * @param {String} type Database model: `Faculty` | `Department`.
+ * @param {number} level Level to retrieve courses for.
  */
-staffSchema.methods.getProjects = async function getProjects() {
-  if (!this.assignedCourses.length) return [];
+staffSchema.methods.getAvailableCourses = async function getAvailableCourses(_id, type, level = undefined) {
+  if (!ObjectId.isValid(_id)) return { error: 'ValueError: Invalid id' };
+  if (type !== 'Faculty' && type !== 'Department'
+  ) return { error: 'ValueError: Invalid type. Valid types are: Faculty, Department' };
+  if (level !== undefined && !levels.includes(level)
+  ) return { error: `ValueError: ${level}. Level must be one of these: undefined,${levels}` };
 
-  // Strip students' private information and return results
-  return mongoose.model('Project')
-    .find({ course: { $in: this.assignedCourses } })
-    .populate('course submissions.student', privateAttrStr.student);
+  // Query helpers
+  const filter = level ? { $elemMatch: { level } } : 1;
+  const select = { name: 1, availableCourses: filter };
+  if (type === 'Department') select.faculty = 1;
+
+  // Retrieve available courses from database for given department or faculty
+  return mongoose.model(type).findOne({ _id }).select(select)
+    .populate('availableCourses.courses', privateAttrStr.all);
 };
 
 /**
- * Class method for creating a new project for a course assigned to lecturer.
- * @param {object[]} attributes Attributes to be assigned to the new project.
+ * Class method for setting all available courses by level and semester in a faculty/department.
+ * Can unset some courses by sending a slice of the array for a particular level and semester.
+ * This data is used by students for course registration.
+ * @param {ObjectId} id ID of lecturer to be assigned the courses.
+ * @param {String} type Model: `Faculty` | `Department`.
+ * @param {Object[]} courses Array of courses to be assigned.
  * @returns {promise.<mongoose.model>}
  */
-staffSchema.methods.createProject = async function createProject(attributes) {
-  if (typeof attributes !== 'object') return { error: 'ValueError: attributes must be an object' };
+staffSchema.methods.setAvailableCourses = async function setAvailableCourses(id, type, courses) {
+  if (!this.privileges.setCourses) return { error: 'Access denied' };
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (type !== 'Faculty' && type !== 'Department'
+  ) return { error: 'ValueError: Invalid type. Valid types are: Faculty, Department' };
+  if (!Array.isArray(courses)) return { error: 'ValueError: courses must be an array' };
 
-  // Check if specified course is assigned to this staff
-  if (!this.assignedCourses.map(obj => String(obj._id)).includes(String(attributes.course))
-  ) return { error: 'Access denied' };
+  // Retrieve faculty or department from database
+  const obj = await mongoose.model(type).findById(id).select(privateAttr.all).exec();
+  if (!obj) return { error: `ValueError: ${type} with id=${id} not found` };
 
-  // Prevent setting user-immutable attributes on new project
-  for (const key of immutables.Project) { delete attributes[key]; }
-  attributes.createdBy = this.id; // Permanently link the new project to the current staff
+  // Retrieve courses from database to validate them
+  courses = await mongoose.model('Course').find({ _id: { $in: courses } })
+    .select(privateAttr.all); // .populate('faculty', 'name availableCourses');
+  if (!courses.length) return { error: 'ValueError: None of the courses exist' };
 
-  // Create and return the project
-  return mongoose.model('Project')(attributes).save();
+  // Parse courses for database schema: Group by level and semester in an object
+  const groupedCourses = courses.reduce((results, course) => {
+    const { level, semester } = course;
+    if (!results[level]) results[level] = {}; // Create slot for current level
+    if (!results[level][semester]) results[level][semester] = []; // Create slot for semester
+    results[level][semester].push(course);
+    return results;
+  }, {});
+
+  // Create hash table for the original availableCourses array
+  const available = obj.availableCourses.reduce((results, course, index) => {
+    results[`${course.level}-${course.semester}`] = index;
+    return results;
+  }, {});
+
+  // Update availableCourses array in given department/faculty
+  for (const [level, data] of Object.entries(groupedCourses)) {
+    for (const [semester, courses] of Object.entries(data)) {
+      // Replace previous record for level/semester if any or add new entry otherwise
+      const i = available[`${level}-${semester}`];
+      if (i !== undefined) obj.availableCourses[i] = { level, semester, courses };
+      else obj.availableCourses.push({ level, semester, courses });
+    }
+  }
+
+  // Save courses and return updated department/faculty
+  return obj.save();
+};
+
+/**
+ * Class method for un-setting available courses by level and semester in a faculty/department.
+ * This data is used by students for course registration.
+ * @example
+ * unsetAvailableCourses(new ObjectId, 'Faculty', [{ level: 100, semester: 1 }])
+ * @param {ObjectId} id ID of lecturer to be assigned the courses.
+ * @param {String} type Model: `Faculty` | `Department`.
+ * @param {Object[]} data Array of available courses data to be unset.
+ * @returns {promise.<mongoose.model>}
+ */
+staffSchema.methods.unsetAvailableCourses = async function unsetAvailableCourses(id, type, data) {
+  if (!this.privileges.setCourses) return { error: 'Access denied' };
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (type !== 'Faculty' && type !== 'Department'
+  ) return { error: 'ValueError: Invalid type. Valid types are: Faculty, Department' };
+  if (!Array.isArray(data) || !data.length
+  ) return { error: 'ValueError: data must be an array of objects like { level: <val>, semester <val> }' };
+
+  // Retrieve faculty or department from database
+  const obj = await mongoose.model(type).findById(id).select(privateAttr.all).exec();
+  if (!obj) return { error: `ValueError: ${type} with id=${id} not found` };
+
+  // Create hash table for the original availableCourses array
+  const available = obj.availableCourses.reduce((results, course, index) => {
+    results[`${course.level}-${course.semester}`] = index;
+    return results;
+  }, {});
+
+  // Map data to indexes of the current availableCourses array
+  data = data.map(datum => available[`${datum.level}-${datum.semester}`]);
+  data.sort((a, b) => b - a); // Sort in descending order for array splicing
+
+  // Splice availableCourses array to unset the specified available courses
+  const results = data.map(index => {
+    if (index === undefined) return false; // No previous record for level and semester
+    obj.availableCourses.splice(index, 1); // Remove previous record for level and semester
+    return true;
+  });
+
+  // Save and return updated department/faculty if one or more records were updated
+  if (results.includes(true)) return obj.save();
+  // Return error as no records were updated
+  return { error: 'No action occurred' };
+};
+
+/**
+ * Class method for retrieving some or all projects for a lecturer's assigned courses.
+ * @param {ObjectId[]} courses Array of lecturer's courses to be checked for projects.
+ * @returns {promise.<mongoose.model[]>}
+ */
+staffSchema.methods.getProjects = async function getProjects(courses = undefined) {
+  if (!this.assignedCourses.length) return [];
+  if (!courses) courses = this.assignedCourses;
+  if (!Array.isArray(courses)) return { error: 'ValueError: courses must be an array' };
+  if (courses.map(course => ObjectId.isValid(course)).includes(false)
+  ) return { error: 'ValueError: courses must be an array of ObjectIds' };
+
+  // Find project(s), populate students' data without private information, return results
+  return mongoose.model('Project').find({ course: { $in: courses } })
+    .populate('course submissions.student', privateAttrStr.student);
 };
 
 /**
