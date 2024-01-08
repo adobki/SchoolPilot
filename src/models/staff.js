@@ -121,6 +121,37 @@ staffSchema.methods.updateExisting = async function updateExisting(id, type, att
 };
 
 /**
+ * Class method for deleting an existing object/document in the database. All types require
+ * a specific priviledge to delete them, except `Project`, which can also be deleted by the
+ * staff who created it.
+ * @param {ObjectId} id ID of object to be deleted.
+ * @param {String} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
+ * @returns {Promise.<mongoose.model>}
+ */
+staffSchema.methods.deleteExisting = async function deleteExisting(id, type) {
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (!models.includes(type)) return { error: `ValueError: Invalid type. Valid types are: ${models}` };
+
+  // Check staff privileges
+  if (!this.privileges.deleteExisting) {
+    if (type === 'Project') {
+      // Find and delete project from database then return it if owned by this staff
+      const deleted = await mongoose.model(type)
+        .findOneAndDelete({ _id: id, createdBy: this.id }).exec();
+      if (deleted) return deleted;
+    }
+    return { error: 'Access denied' };
+  }
+
+  // Find and delete object/document from database if it exists
+  const deleted = await mongoose.model(type).findByIdAndDelete(id).exec();
+  if (!deleted) return { error: `ValueError: ${type} with id=${id} not found` };
+
+  // Return deleted object
+  return deleted;
+};
+
+/**
  * Class method for creating multiple objects/documents in the database simultaneously. Uses the
  * Mongoose `insertMany` method to optimise insertion. However, insertions are done in batches
  * of 500 objects to reduce memory/buffer issues.
