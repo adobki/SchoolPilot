@@ -1,14 +1,14 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable jest/require-hook */
 /* eslint-disable import/newline-after-import */
 //  create the Express server:
-// it should listen on the port set by the environment variable PORT or by default 5000
-// it should load all routes from the file routes/index.js
+require('./utils/config'); // Make sure this is at the top
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3500;
+const port = process.env.EXPRESS_PORT || 3500;
 const router = require('./routes/index');
 const dbClient = require('./utils/db'); // Make sure to import your DB client
+const redisClient = require('./utils/redis');
+const { swaggerUi, specs } = require('../src/utils/swagger');
 
 // it should parse the body of the request as a JSON object for all HTTP requests
 app.use(express.json());
@@ -16,17 +16,28 @@ app.use(express.json());
 // it should load all routes from the file routes/index.js
 app.use(router);
 
+// Serve Swagger UI documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+
 // Initialize the database connection when the application starts
 async function startServer() {
+  // ensure Redis Conn is ready
+  const redisStatus = await redisClient.isAlive();
+  if (!redisStatus) {
+    console.error('Failed to initialize Redis');
+    process.exit(1);
+  }
   try {
-    // ensure the connection is oppened before starting the server
+    // ensure DB Conn is ready
     await dbClient.isAlive();
-    app.listen(port, () => {
-      console.log(`Server running on port ${port}: http://localhost:${port}`);
-    });
   } catch (error) {
     console.error('Failed to initialize the database:', error);
+    process.exit(1);
   }
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}: http://localhost:${port}`);
+  });
 }
 
 startServer();

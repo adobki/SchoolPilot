@@ -1,20 +1,30 @@
-/* eslint-disable jest/require-hook */
-/* eslint-disable object-curly-newline */
-
-// create the Express server:
 const express = require('express');
+const cors = require('cors')
+// import the router for each controller
+const studentRouter = require('./StudentRoutes');
+const staffRouter = require('./StaffRoutes');
+const genRouter = require('./GeneralRoutes.js');
+// const { swaggerUi, specs } = require('../utils/swagger');
+// it should enable CORS
+const corsOptions = {
+  origin: '*', // allow all origins for now
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true,
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
+};
+
 // router are used to separate the routes from the main server file
 const router = express.Router();
-// import the user controller
-const userController = require('../controllers/UsersController');
 
-// router.post('/signup', userController.signup);
-router.post('/login', userController.login);
+router.use(cors( corsOptions ));
 
-// router.post('/signup', userController.signup);
-router.post('/signup', userController.signup);
+// // Serve Swagger UI documentation
+// router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// router.get('/users', userController.allUsers);
-router.get('/users', userController.getAllUser);
+router.use('/api/v1/healthcheck', genRouter);
+router.use('/api/v1/studentportal', studentRouter);
+router.use('/api/v1/staffportal', staffRouter);
 
 module.exports = router;
