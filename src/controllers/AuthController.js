@@ -1,6 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
+// const { Student } = require('../models/student');
+const { Department } = require('../models/department');
+ const { Course } = require('../models/course');
+const { Faculty } = require('../models/faculty');
 
 // token key expiration 24hrs
 const EXP = 60 * 60 * 24;
@@ -147,6 +151,64 @@ class AuthController {
     } catch (err) {
       return null;
     }
+  }
+  static async getDashboardData(obj) {
+    const userObj = obj.toObject();
+    const exclude = ['password', 'createdAt', 'updatedAt', '__v', 'resetOTP', 'resetTTL', 'resetPwd', 'department', 'registeredCourses', 'faculty', 'availableCourses'];
+    const stdData = {};
+    const facData = {};
+    const dptData = {};
+    const courseData = [];
+    const regCourseData = {};
+
+    for (const key in userObj) {
+      if (!exclude.includes(key)) {
+        stdData[key] = userObj[key];
+      }
+    }
+    const dpt = await Department.findById(obj.department);
+    if (!dpt) {
+      throw new Error('Department not found');
+    }
+    const dptObj = dpt.toObject();
+    for (const key in dptObj) {
+      if (!exclude.includes(key)) {
+        dptData[key] = dptObj[key];
+      }
+    }
+
+    const fac = await Faculty.findById(dpt.faculty);
+    if (!fac) {
+      throw new Error('Faculty not found');
+    }
+    const factObj = fac.toObject();
+    for (const key in factObj) {
+      if (!exclude.includes(key)) {
+        facData[key] = factObj[key];
+      }
+    }
+
+    const arrRegCourses = obj.registeredCourses;
+    if (!arrRegCourses) {
+      return { stdData, dptData, facData, courseData };
+    }
+    for (const courseObjects of arrRegCourses) {
+      const { courses } = courseObjects;
+      for (const objID of courses) {
+        const course = await Course.findById(objID);
+        if (!course) {
+          throw new Error('Course not found');
+        }
+        const courseObj = course.toObject();
+        for (const key in courseObj) {
+          if (!exclude.includes(key)) {
+            regCourseData[key] = courseObj[key];
+          }
+        }
+        courseData.push(regCourseData);
+      }
+    }
+    return { stdData, dptData, facData, courseData };
   }
 }
 
