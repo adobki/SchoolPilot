@@ -1,7 +1,7 @@
 // Student class: User accounts for students
 
 const mongoose = require('mongoose');
-const { ObjectId, enums } = require('./base');
+const { ObjectId, enums, immutables } = require('./base');
 const { person, methods, privateAttrStr } = require('./person');
 
 const { levels, types, standings, roles } = enums.students;
@@ -170,8 +170,11 @@ studentSchema.methods.submitProject = async function submitProject(id, answer) {
   const submitted = project.submissions.findIndex(sub => sub.student === this.id);
   if (submitted > -1) project.submissions[submitted] = { student: this.id, answer };
   else project.submissions.push({ student: this.id, answer });
+  await project.save();
 
-  return project.save();
+  // Return project with only student's submission
+  project.submissions = { student: this.id, answer };
+  return project;
 };
 
 // Student class

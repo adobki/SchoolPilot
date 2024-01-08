@@ -436,13 +436,21 @@ staffSchema.methods.gradeProject = async function gradeProject(id, scores) {
   // Prevent grading a project before its deadline
   if (project.deadline > Date.now()) return { error: 'Projects can only be graded after their deadline' };
 
-  // Store scores and comments of students with submissions for the project in the database
+  // Add scores of students and comments to submissions for the project in the database
+  let graded = false;
   project.submissions.map(submission => {
-    const grade = scores[String(submission.student)];
-    if (grade) submission.score = grade.score; submission.comment = grade.comment;
+    const grade = scores[submission.student.id];
+    if (grade) {
+      submission.score = grade.score;
+      submission.comment = grade.comment;
+      graded = true;
+    }
     return submission;
   });
-  return project.save();
+
+  // Return results
+  if (graded) return project.save();
+  return { error: 'No action occurred' };
 };
 
 // Staff class
