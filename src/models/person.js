@@ -1,10 +1,13 @@
 // Person: Base class and methods for all user account types
 
 const { v4: uuid } = require('uuid');
-const { ObjectId, enums, privileges } = require('./base');
+const {
+  ObjectId, enums, privileges, privateAttr: { privateAttr, privateAttrStr },
+} = require('./base');
 const { Faculty } = require('./faculty');
 const { Department } = require('./department');
 const { Course } = require('./course');
+const { Project } = require('./project');
 const { Record } = require('./record');
 
 const { genders, statuses } = enums.students;
@@ -19,19 +22,16 @@ const person = {
   department: { type: ObjectId, ref: 'Department', required: true },
   gender: { type: String, enum: genders, required: true },
   DOB: { type: Date, required: true },
-  password: String,
   nationality: String,
   stateOfOrigin: String,
   LGA: String,
   phone: Number,
   picture: String,
+  password: String,
   resetPwd: Boolean,
   resetTTL: Date,
   resetOTP: String,
 };
-const personMutableAttr = [
-  'email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture',
-];
 
 /**
  * Validations and constraints for user accounts. Enforces some
@@ -58,9 +58,7 @@ function validatePerson() {
  * @returns {String} "`firstName` + [`middleName` + ]`lastName`"
  */
 function getFullName() {
-  const { firstName, middleName, lastName } = this;
-  if (middleName) return [firstName, middleName, lastName].join(' ');
-  return [firstName, lastName].join(' ');
+  return [this.firstName, this.middleName, this.lastName].join(' ');
 }
 
 /**
@@ -69,9 +67,21 @@ function getFullName() {
  * @returns {promise.<mongoose.Model>} User object with valid updated attributes.
  */
 async function updateProfile(attributes) {
+  const mutableAttr = ['email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture'];
   for (const [key, val] of Object.entries(attributes)) {
-    if (personMutableAttr.includes(key)) this[key] = val;
+    if (mutableAttr.includes(key)) this[key] = val;
   }
+  return this.save();
+}
+
+/**
+ * Method for changing a user's password.
+ * @param {string} newPassword New password provided by the user.
+ * @returns {promise.<mongoose.Model>} User object with updated password.
+ */
+async function changePassword(newPassword) {
+  this.password = newPassword;
+  this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
   return this.save();
 }
 
@@ -83,7 +93,7 @@ async function updateProfile(attributes) {
  */
 async function forgotPassword() {
   this.resetPwd = true;
-  this.resetTTL = Date.now() + (1000 * 60 * 30); // 30 minutes validity
+  this.resetTTL = Date.now() + (1000 * 60 * 5); // 5 minutes validity
   this.resetOTP = uuid().slice(-7, -1); // random 6-character token
   await this.save();
   return this.resetOTP;
@@ -98,7 +108,7 @@ async function forgotPassword() {
  * @returns {promise.<mongoose.Model>} User object with updated password.
  */
 async function resetPassword(OTP, newPassword) {
-  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case insensitive token
+  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case-insensitive token
     if (this.resetTTL < Date.now()) return { error: 'ValueError: OTP has expired' };
     this.password = newPassword;
     this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
@@ -109,17 +119,19 @@ async function resetPassword(OTP, newPassword) {
 
 module.exports = {
   person,
-  personMethods: {
+  methods: {
     validatePerson,
     getFullName,
     updateProfile,
     forgotPassword,
     resetPassword,
-    // deleteProfile,
+    changePassword,
   },
-  personMutableAttr,
+  privateAttr,
+  privateAttrStr,
   Faculty,
   Department,
   Course,
+  Project,
   Record,
 };
