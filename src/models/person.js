@@ -8,6 +8,7 @@ const { Department } = require('./department');
 const { Course } = require('./course');
 const { Project } = require('./project');
 const { Record } = require('./record');
+const { Schedule } = require('./schedule');
 const methods = require('./methods/person_methods');
 
 const { genders, statuses } = enums.students;
@@ -44,4 +45,5 @@ module.exports = {
   Course,
   Project,
   Record,
+  Schedule,
 };

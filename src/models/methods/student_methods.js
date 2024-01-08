@@ -1,7 +1,7 @@
 // Methods for Student class/user accounts for students
 
 const mongoose = require('mongoose');
-const { ObjectId, enums } = require('../base');
+const { ObjectId, enums, immutables } = require('../base');
 const { privateAttrStr } = require('../person');
 
 const { semesters } = enums.courses;
@@ -144,6 +144,87 @@ async function submitProject(id, answer) {
   return project;
 }
 
+/**
+ * Class method for retrieving schedules for a student by date.
+ * @param {Date} startDate Lower bound of date range.
+ * @param {Date} endDate Upper bound of date range.
+ * @returns {Promise.<mongoose.Model[]>}
+ */
+async function getSchedules(startDate, endDate) {
+  if (new Date(startDate).toString() === 'Invalid Date') return { error: 'ValueError: Invalid startDate' };
+  if (new Date(endDate).toString() === 'Invalid Date') return { error: 'ValueError: Invalid endDate' };
+
+  // Retrieve schedules from database
+  return mongoose.model('Project').find({
+    createdBy: this.id,
+    time: { $gte: startDate, $lte: endDate },
+  }).sort({ time: 1 }).select({ createdBy: 0 });
+}
+
+/**
+ * Class method for creating a new schedule for a student
+ * @param {Object} attributes Attributes to be assigned to the new schedule.
+ * @returns {Promise.<mongoose.Model>}
+ */
+async function createSchedule(attributes) {
+  if (!attributes || typeof attributes !== 'object') return { error: 'ValueError: Invalid attributes' };
+
+  // Prevent setting user-immutable attributes on this schedule
+  for (const key of immutables.Project) { delete attributes[key]; }
+
+  attributes.createdBy = this.id; // Permanently link the new schedule to this student
+
+  return mongoose.model('Schedule')(attributes).save();
+}
+
+/**
+ * Class method for updating an existing student's schedule.
+ * @param {ObjectId} id ID of schedule to be updated.
+ * @param {Object} attributes New attributes to be assigned to the schedule.
+ * @returns {Promise.<mongoose.Model>}
+ */
+async function updateSchedule(id, attributes) {
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+  if (!attributes || typeof attributes !== 'object') return { error: 'ValueError: Invalid attributes' };
+
+  // Retrieve schedule from database
+  const schedule = await mongoose.model('Schedule').findById(id).exec();
+  if (!schedule) return { error: `ValueError: Schedule with id=${id} not found` };
+
+  // Check if schedule is owned by this student
+  if (String(schedule.createdBy) !== this.id) return { error: 'Access denied' };
+
+  // Prevent updating user-immutable attributes on this schedule
+  for (const key of immutables.Project) { delete attributes[key]; }
+
+  // Apply given attributes updates to schedule
+  for (const [key, value] of Object.entries(attributes)) {
+    schedule[key] = value;
+  }
+
+  return schedule.save();
+}
+
+/**
+ * Class method for deleting a student's schedule.
+ * @param {ObjectId} id ID of schedule to be deleted.
+ * @returns {Promise.<Boolean>}
+ */
+async function deleteSchedule(id) {
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+
+  // Retrieve schedule from database
+  const schedule = await mongoose.model('Schedule').findById(id).exec();
+  if (!schedule) return { error: `ValueError: Schedule with id=${id} not found` };
+
+  // Check if schedule is owned by this student
+  if (String(schedule.createdBy) !== this.id) return { error: 'Access denied' };
+
+  // Delete schedule from database and return result
+  if ((await schedule.deleteOne()).deletedCount >= 1) return true;
+  return false;
+}
+
 module.exports = {
   getAvailableCourses,
   unregisterCourses,
@@ -151,4 +232,8 @@ module.exports = {
   getRegisteredCourses,
   getProjects,
   submitProject,
+  getSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
 };
