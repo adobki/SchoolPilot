@@ -64,7 +64,7 @@ studentSchema.methods.getAvailableCourses = async function getAvailableCourses(s
   const courses = [department, faculty].map(obj => ({
     _id: obj._id,
     name: obj.name,
-    courses: obj.availableCourses.length ? obj.availableCourses[0].courses : undefined,
+    courses: obj.availableCourses.length ? obj.availableCourses[0].courses : [],
   }));
   return { department: courses[0], faculty: courses[1] };
 };

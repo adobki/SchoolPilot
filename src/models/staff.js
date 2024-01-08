@@ -203,12 +203,41 @@ staffSchema.methods.assignCourses = async function assignCourses(id, courses) {
   ) return { error: 'ValueError: courses must be an array of ObjectIds' };
 
   // Retrieve staff from database
-  const staff = await mongoose.model('Staff').findById(id).exec();
+  const staff = await mongoose.model('Staff').findById(id)
+    // .select(privateAttr.staff)
+    .select(privateAttr.all)
+    .populate('department', `${privateAttrStr.all} -availableCourses`).exec();
   if (!staff) return { error: `ValueError: Staff with id=${id} not found` };
 
-  // Assign courses to staff (overwrites previous assignment)
-  staff.assignedCourses = courses;
-  return staff.save();
+  // Check for courses unassignment on empty courses array
+  if (!courses.length) {
+    staff.assignedCourses = [];
+    return staff.save();
+  }
+
+  // Retrieve courses from database to validate them
+  courses = await mongoose.model('Course').find({ _id: { $in: courses } })
+    .select(privateAttr.all)
+    .populate('department', `${privateAttrStr.all} -availableCourses`);
+  if (!courses.length) return { error: 'ValueError: None of the courses exists' };
+
+  // Filter valid courses from departments in the lecturer's faculty
+  const results = courses.reduce((results, course, index) => {
+    if (String(course.department.faculty) === String(staff.department.faculty)
+    ) results.registered.push(course);
+    else results.failed.push({ index, course, reason: "Not from lecturer's faculty" });
+    return results;
+  }, { staff: {}, registered: [], failed: [] });
+
+  // Assign valid courses to staff (overwrites previous assignment)
+  if (results.registered) {
+    staff.assignedCourses = results.registered;
+    await staff.save();
+  }
+
+  // Return staff object if all courses were valid or results object otherwise
+  if (!results.failed.length) return staff;
+  return { ...results, staff };
 };
 
 /**
