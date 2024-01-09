@@ -34,7 +34,6 @@ const person = {
   resetOTP: String,
 };
 
-
 module.exports = {
   person,
   methods,
