@@ -8,15 +8,29 @@ const staffController = require('../controllers/StaffController');
 /** GETMethods */
 /**
  * @openapi
- * '/api/v1/staffportal/healthcheck':
- *  get:
+ * /api/v1/staffportal/healthcheck:
+ *   get:
+ *     summary: Health Check Endpoint for Staff Portal
+ *     description: Endpoint to perform a health check for the staff portal.
  *     tags:
- *     - Staff Controller
+ *       - Staff Controller
  *     responses:
- *      200:
- *        description: Successful
- *      500:
- *        description: Internal Server Error
+ *       200:
+ *         description: Successful health check.
+ *         content:
+ *           application/json:
+ *             example:
+ *               - portal: "staffportal"
+ *                 message: "Server is up and running"
+ *                 redisStatus: true
+ *                 dbStatus: true
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: 'error'
+ *               message: 'Internal Server Error.'
  */
 // get the health check for redis and db connection
 staffRouter.get('/healthcheck', staffController.healthCheck);

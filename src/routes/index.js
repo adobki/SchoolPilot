@@ -12,7 +12,7 @@ const corsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204,
   credentials: true,
-  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization", "X-Token"],
 };
 
 // router are used to separate the routes from the main server file

@@ -10,19 +10,33 @@ const genController = require('../controllers/GeneralController');
 /** GETMethods */
 /**
  * @openapi
- * '/api/v1/healthcheck':
- *  get:
+ * /api/v1/healthcheck:
+ *   get:
+ *     summary: Genral Health Check Endpoint for both Staff Portal and Student Portal
+ *     description: Endpoint to perform a general healthcheck on infrastructres.
  *     tags:
- *     - General Controller
- *     summary: check the health of the redis server and the database-
+ *       - Staff Controller
  *     responses:
- *      200:
- *        description: Health Check Successful
- *      500:
- *        description: Health Check Failed
- *     404:
- *        description: Not Found
- * 
+ *       200:
+ *         description: Successful health check.
+ *         content:
+ *           application/json:
+ *             example:
+ *               - portal: "studentportal"
+ *                 message: "Server is up and running"
+ *                 redisStatus: true
+ *                 dbStatus: true
+ *               - portal: "staffportal"
+ *                 message: "Server is up and running"
+ *                 redisStatus: true
+ *                 dbStatus: true
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: 'error'
+ *               message: 'Internal Server Error.'
  */
 // get the health check for redis and db connection
 genRouter.get('/', genController.healthCheck);
