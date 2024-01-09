@@ -45,6 +45,11 @@ studentSchema.methods.registerCourses = studentMethods.registerCourses;
 studentSchema.methods.getRegisteredCourses = studentMethods.getRegisteredCourses;
 studentSchema.methods.getProjects = studentMethods.getProjects;
 studentSchema.methods.submitProject = studentMethods.submitProject;
+studentSchema.methods.getSchedules = studentMethods.getSchedules;
+studentSchema.methods.getParsedSchedules = studentMethods.getParsedSchedules;
+studentSchema.methods.createSchedule = studentMethods.createSchedule;
+studentSchema.methods.updateSchedule = studentMethods.updateSchedule;
+studentSchema.methods.deleteSchedule = studentMethods.deleteSchedule;
 
 // Student class
 const Student = mongoose.model('Student', studentSchema);

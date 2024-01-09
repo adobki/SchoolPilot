@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums, immutables } = require('../base');
-const { privateAttrStr } = require('../person');
+const { privateAttr, privateAttrStr } = require('../person');
 
 const { semesters } = enums.courses;
 
@@ -150,15 +150,38 @@ async function submitProject(id, answer) {
  * @param {Date} endDate Upper bound of date range.
  * @returns {Promise.<mongoose.Model[]>}
  */
-async function getSchedules(startDate, endDate) {
+async function getSchedules(startDate = '1900-01-01', endDate = '2999-12-31') {
   if (new Date(startDate).toString() === 'Invalid Date') return { error: 'ValueError: Invalid startDate' };
   if (new Date(endDate).toString() === 'Invalid Date') return { error: 'ValueError: Invalid endDate' };
 
   // Retrieve schedules from database
-  return mongoose.model('Project').find({
+  return mongoose.model('Schedule').find({
     createdBy: this.id,
     time: { $gte: startDate, $lte: endDate },
-  }).sort({ time: 1 }).select({ createdBy: 0 });
+  }).sort({ time: 1 }).select({ ...privateAttr.all, createdBy: 0 });
+}
+
+/**
+ * Class method for retrieving schedules for a student by date. Result is a parsed object.
+ * @param {Date} startDate Lower bound of date range.
+ * @param {Date} endDate Upper bound of date range.
+ * @returns {Promise.<Object>}
+ */
+async function getParsedSchedules(startDate = '1900-01-01', endDate = '2999-12-31') {
+  // Retrieve schedules from database
+  const schedules = await this.getSchedules(startDate, endDate);
+  if (schedules.error) return { error: schedules.error };
+  if (!schedules || !schedules.length) return {};
+
+  // Parse and return schedules data
+  return schedules.reduce((results, schedule) => {
+    const [day, month, year] = schedule.time
+      .toLocaleDateString('en-gb', { day: 'numeric', month: 'long', year: 'numeric' }).split(' ');
+    if (!results[`${month}-${year}`]) results[`${month}-${year}`] = {}; // Add slot for month and year
+    if (!results[`${month}-${year}`][day]) results[`${month}-${year}`][day] = []; // Add slot for day
+    results[`${month}-${year}`][day].push(schedule);
+    return results;
+  }, {});
 }
 
 /**
@@ -233,6 +256,7 @@ module.exports = {
   getProjects,
   submitProject,
   getSchedules,
+  getParsedSchedules,
   createSchedule,
   updateSchedule,
   deleteSchedule,
