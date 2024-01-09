@@ -59,6 +59,10 @@ class StudentController {
         message: 'Activaton token sent successfully',
         email: existingUser.email,
         token,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to signup user account' });
@@ -97,14 +101,17 @@ class StudentController {
       if (user.error) {
         return res.status(404).json({ error: user.error });
       }
-      const studenData = await authClient.getDashboardData(user);
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
       res.status(201).json({
         message: 'Account activated successfully',
         email: existingUser.email,
         xToken,
-        studenData,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,        
       });
       // needed for the user profile activation
     } catch (err) {
@@ -150,11 +157,15 @@ class StudentController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update user profile' });
       }
-      const studentData = await authClient.getDashboardData(updatedObj);
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedObj);
       res.status(201).json({
         message: 'User profile updated successfully',
-        data: userData,
-        studentData,
+        email: updatedObj.email,
+        xToken: token,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update user profile' });
@@ -195,13 +206,15 @@ class StudentController {
       if (!xToken) {
         return res.status(500).json({ error: 'Internal Server Error' });
       }
-      const studentData = await authClient.getDashboardData(user);
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);      
       res.status(201).json({
         message: 'Login successful',
-        id: user._id,
         email: user.email,
         xToken,
-        studentData,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
     } catch (err) {
       console.error(err);
