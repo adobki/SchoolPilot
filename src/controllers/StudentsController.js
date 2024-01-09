@@ -58,11 +58,7 @@ class StudentController {
       res.status(201).json({
         message: 'Activaton token sent successfully',
         email: existingUser.email,
-        token,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,
+        activationToken: token,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to signup user account' });
