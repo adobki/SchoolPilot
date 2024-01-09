@@ -263,7 +263,7 @@ class StudentController {
       await mailClient.sendToken(user);
       res.status(201).json({
         message: 'Password reset token sent successfully',
-        email: existingUser.email,
+        email: user.email,
         resetToken,
       });
     }
