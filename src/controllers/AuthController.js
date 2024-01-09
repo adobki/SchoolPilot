@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
-// const { Student } = require('../models/student');
+ const { Student } = require('../models/student');
 const { Department } = require('../models/department');
  const { Course } = require('../models/course');
 const { Faculty } = require('../models/faculty');
@@ -122,6 +122,36 @@ class AuthController {
     }
     return encryptToken;
   }
+
+  static async checkCurrConn(req, res) {
+    // retrive the user token, if not found raise 401
+    const xToken = req.get('X-Token');
+    if (!xToken) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    try {
+      // retriee the basicAuthToken from reids
+      const userID = await this.getUserID(xToken);
+      if (!userID) {
+        res.status(401).json({
+          error: 'Unauthorized',
+        });
+      }
+      // retreive the user object base on the token
+      if (!dbClient.isAlive()) {
+        res.status(500).json({
+          error: 'Database is not alive',
+        });
+      }
+      return { userID, xToken };
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to login' });
+    }
+  }
+
 
   static async decodeLoginToken(token) {
     // decode the token to get the matricNo and password

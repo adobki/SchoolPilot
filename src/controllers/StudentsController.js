@@ -9,7 +9,7 @@ const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
 // const { Department } = require('../models/department');
- const { Course } = require('../models/course');
+const { Course } = require('../models/course');
 // const { Faculty } = require('../models/faculty');
 const { enums, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
@@ -212,25 +212,7 @@ class StudentController {
   static async logout(req, res) {
     // logout the user
     // retrive the user token, if not found raise 401
-    const token = req.get('X-Token');
-    if (!token) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
-    }
-    // retriee the basicAuthToken from reids
-    const userID = await authClient.getUserID(token);
-    if (!userID) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
-    }
-    // retreive the user object base on the token
-    if (!dbClient.isAlive()) {
-      res.status(500).json({
-        error: 'Database is not alive',
-      });
-    }
+    const userID = await authClient.checkCurrConn(req, res);
     const user = await Student.findById(userID);
     if (!user) {
       res.status(401).json({
@@ -366,7 +348,7 @@ class StudentController {
       const user = await existingUser.resetPassword(token, hashedPwd);
       if (user.error) {
         return res.status(404).json({ error: user.error });
-      }     
+      }
       // check if server is up before verifying
       if (!await dbClient.isAlive()) {
         return res.status(500).json({ error: 'Database connection failed' });
@@ -381,7 +363,7 @@ class StudentController {
         studenData: stdData,
         deptData: dptData,
         factultyData: facData,
-        courseData, 
+        courseData,
       });
       // needed for the user profile activation
     } catch (err) {
@@ -390,7 +372,58 @@ class StudentController {
     }
   }
 
-  
+  static async setChangePassword(req, res) {
+    const { userID, xToken } = await authClient.checkCurrConn(req, res);
+    const user = await Student.findById(userID);
+    if (!user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    const { email, oldPassword, newPassword } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Missing email' });
+    }
+    if (!oldPassword) {
+      res.status(400).json({ error: 'Missing old password' });
+    }
+    if (!newPassword) {
+      res.status(400).json({ error: 'Missing new password' });
+    }
+    // check if server is up before verifying
+    if (!await dbClient.isAlive()) {
+      res.status(500).json({ error: 'Database connection failed' });
+    }
+    // check if user object profile is already activated, if true redirect to login instead
+    if (user.status !== statuses[1]) {
+      res.status(400).json({ error: 'User not verified\nPlease signin' });
+    }
+    // compare old password to the hashed password in the database
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      res.status(400).json({ error: 'Invalid old password' });
+    }
+    // hash the password using bcrypt
+    const hashedPwd = await bcrypt.hash(newPassword, 12);
+    try {
+      const updatedUser = await user.changePassword(hashedPwd);
+      if (updatedUser.error) {
+        res.status(400).json({ error: updatedUser.error });
+      }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedUser);
+      res.status(201).json({
+        message: 'Password changed successfully',
+        email: updatedUser.email,
+        xToken,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
+      });
+    } catch (err) {
+      res.status(400).json({ error: err });
+      }
+  }
 }
 
 module.exports = StudentController;
