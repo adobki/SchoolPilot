@@ -109,7 +109,7 @@ async function getProjects() {
 
   // Retrieve projects for current semester with students' submission and return it
   return mongoose.model('Project')
-    .find({ course: { $in: this.registeredCourses.slice(-1)[0].courses } })
+    .find({ course: { $in: this.registeredCourses.at(-1).courses } })
     .select({ submissions: { $elemMatch: { student: this.id } } })
     .populate('course createdBy', privateAttrStr.staff);
 }
@@ -145,7 +145,7 @@ async function submitProject(id, answer) {
 }
 
 /**
- * Class method for retrieving schedules for a student by date.
+ * Class method for retrieving schedules for a student by date. Result is sorted by `time` field.
  * @param {Date} startDate Lower bound of date range.
  * @param {Date} endDate Upper bound of date range.
  * @returns {Promise.<mongoose.Model[]>}

@@ -70,7 +70,7 @@ const immutables = {
 };
 
 // Private attributes to be omitted from returned models in staff/student methods
-const allPrivateAttr = { __v: 0, createdAt: 0 }; // , // updatedAt: 0 };
+const allPrivateAttr = { __v: 0, updatedAt: 0 };
 const passwordAttr = { password: 0, resetPwd: 0, resetTTL: 0, resetOTP: 0 };
 const personPrivateAttr = {
   ...allPrivateAttr,
@@ -83,7 +83,7 @@ const personPrivateAttr = {
   role: 0,
 };
 const staffPrivateAttr = { ...personPrivateAttr, privileges: 0, assignedCourses: 0 };
-const studentPrivateAttr = { ...personPrivateAttr, projects: 0, registeredCourses: 0 };
+const studentPrivateAttr = { ...personPrivateAttr, registeredCourses: 0 };
 
 // Concatenated version of private attribues for use in Mongoose project() method
 const allPrivateAttrStr = ['', ...Object.keys(allPrivateAttr)].join(' -').trim();

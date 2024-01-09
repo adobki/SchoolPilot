@@ -410,7 +410,7 @@ async function gradeProject(id, scores) {
   // Add scores of students and comments to submissions for the project in the database
   let graded = false;
   project.submissions.map(submission => {
-    const grade = scores[submission.student.id];
+    const grade = scores[submission.student] ? scores[submission.student.id] : undefined;
     if (grade) {
       submission.score = grade.score;
       submission.comment = grade.comment;
