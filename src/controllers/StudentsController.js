@@ -8,7 +8,10 @@
 const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
-const { enums } = require('../models/base');
+// const { Department } = require('../models/department');
+const { Course } = require('../models/course');
+// const { Faculty } = require('../models/faculty');
+const { enums, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 const { statuses } = enums.students;
@@ -55,7 +58,7 @@ class StudentController {
       res.status(201).json({
         message: 'Activaton token sent successfully',
         email: existingUser.email,
-        token,
+        activationToken: token,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to signup user account' });
@@ -94,12 +97,17 @@ class StudentController {
       if (user.error) {
         return res.status(404).json({ error: user.error });
       }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
       res.status(201).json({
         message: 'Account activated successfully',
         email: existingUser.email,
         xToken,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,        
       });
       // needed for the user profile activation
     } catch (err) {
@@ -145,9 +153,15 @@ class StudentController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update user profile' });
       }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedObj);
       res.status(201).json({
         message: 'User profile updated successfully',
-        data: userData,
+        email: updatedObj.email,
+        xToken: token,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update user profile' });
@@ -156,6 +170,7 @@ class StudentController {
 
   static async login(req, res) {
     const encryptToken = await authClient.checkConn(req, res);
+    console.log(encryptToken);
     const { matricNo, password } = await authClient.decodeLoginToken(encryptToken);
     if (!matricNo) {
       return res.status(400).json({ error: 'Missing Matric Number' });
@@ -187,13 +202,18 @@ class StudentController {
       if (!xToken) {
         return res.status(500).json({ error: 'Internal Server Error' });
       }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);      
       res.status(201).json({
         message: 'Login successful',
-        id: user._id,
         email: user.email,
         xToken,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: 'Failed to login' });
     }
   }
@@ -201,25 +221,7 @@ class StudentController {
   static async logout(req, res) {
     // logout the user
     // retrive the user token, if not found raise 401
-    const token = req.get('X-Token');
-    if (!token) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
-    }
-    // retriee the basicAuthToken from reids
-    const userID = await authClient.getUserID(token);
-    if (!userID) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
-    }
-    // retreive the user object base on the token
-    if (!dbClient.isAlive()) {
-      res.status(500).json({
-        error: 'Database is not alive',
-      });
-    }
+    const userID = await authClient.checkCurrConn(req, res);
     const user = await Student.findById(userID);
     if (!user) {
       res.status(401).json({
@@ -270,7 +272,7 @@ class StudentController {
       await mailClient.sendToken(user);
       res.status(201).json({
         message: 'Password reset token sent successfully',
-        email: existingUser.email,
+        email: user.email,
         resetToken,
       });
     }
@@ -356,17 +358,80 @@ class StudentController {
       if (user.error) {
         return res.status(404).json({ error: user.error });
       }
+      // check if server is up before verifying
+      if (!await dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Database connection failed' });
+      }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
       res.status(201).json({
         message: 'Password reset successfully',
-        email: existingUser.email,
+        email: user.email,
         xToken,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
       });
       // needed for the user profile activation
     } catch (err) {
+      console.log(err);
       return res.status(400).json({ error: err });
     }
+  }
+
+  static async setChangePassword(req, res) {
+    const { userID, xToken } = await authClient.checkCurrConn(req, res);
+    const user = await Student.findById(userID);
+    if (!user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+    const { email, oldPassword, newPassword } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Missing email' });
+    }
+    if (!oldPassword) {
+      res.status(400).json({ error: 'Missing old password' });
+    }
+    if (!newPassword) {
+      res.status(400).json({ error: 'Missing new password' });
+    }
+    // check if server is up before verifying
+    if (!await dbClient.isAlive()) {
+      res.status(500).json({ error: 'Database connection failed' });
+    }
+    // check if user object profile is already activated, if true redirect to login instead
+    if (user.status !== statuses[1]) {
+      res.status(400).json({ error: 'User not verified\nPlease signin' });
+    }
+    // compare old password to the hashed password in the database
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      res.status(400).json({ error: 'Invalid old password' });
+    }
+    // hash the password using bcrypt
+    const hashedPwd = await bcrypt.hash(newPassword, 12);
+    try {
+      const updatedUser = await user.changePassword(hashedPwd);
+      if (updatedUser.error) {
+        res.status(400).json({ error: updatedUser.error });
+      }
+      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedUser);
+      res.status(201).json({
+        message: 'Password changed successfully',
+        email: updatedUser.email,
+        xToken,
+        studenData: stdData,
+        deptData: dptData,
+        factultyData: facData,
+        courseData,
+      });
+    } catch (err) {
+      res.status(400).json({ error: err });
+      }
   }
 }
 
