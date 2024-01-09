@@ -1,7 +1,20 @@
 // create the Express server:
 const express = require('express');
+const cors = require('cors')
 // router are used to separate the routes from the main server file
 const genRouter = express.Router();
+
+const corsOptions = {
+  origin: '*', // allow all origins for now
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true,
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization", "X-Token"],
+};
+// use Cors
+genRouter.use(cors( corsOptions ));
+
 // import the controller
 const genController = require('../controllers/GeneralController');
 
@@ -38,6 +51,7 @@ const genController = require('../controllers/GeneralController');
  *               status: 'error'
  *               message: 'Internal Server Error.'
  */
+
 // get the health check for redis and db connection
 genRouter.get('/', genController.healthCheck);
 
