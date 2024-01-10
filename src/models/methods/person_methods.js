@@ -1,8 +1,10 @@
 // Methods for person/all user account types
 
+const mongoose = require('mongoose');
 const { v4: uuid } = require('uuid');
-const { enums, privileges, immutables } = require('../base');
+const { ObjectId, enums, privileges, immutables, privateAttr: attr } = require('../base');
 
+const { privateAttr, privateAttrStr } = attr;
 const { statuses } = enums.students;
 
 /**
@@ -206,6 +208,30 @@ async function deleteSchedule(id) {
   return false;
 }
 
+/**
+ * Method for getting data for populating a user's dashboard.
+ * @returns {promise.<mongoose.Model[]>}
+ */
+async function getDashboardData() {
+  // Fetch department and faculty data from database
+  this.department = await mongoose.model('Department').findById(this.department.id)
+    .select(privateAttrStr.department).populate('faculty', privateAttrStr.department);
+
+  // Cast user to object without private attributes
+  const privateAttributes = Object.keys({ ...privateAttr.all, ...privateAttr.person });
+  const user = Object.entries(this.toObject()).reduce((results, entry) => {
+    const [key, value] = entry;
+    if (!privateAttributes.includes(key)) results[key] = value;
+    return results;
+  }, {});
+
+  // Add dashboard data to user object and return it
+  user.faculty = user.department.faculty; delete user.department.faculty;
+  user.schedules = await this.getSchedules();
+  user.projects = await this.getProjects();
+  return user;
+}
+
 module.exports = {
   validatePerson,
   getFullName,
@@ -219,4 +245,5 @@ module.exports = {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  getDashboardData,
 };
