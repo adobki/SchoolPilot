@@ -47,28 +47,30 @@ async function updateProfile(attributes) {
 }
 
 /**
- * Method for changing a user's password.
- * @param {string} newPassword New password provided by the user.
- * @returns {promise.<mongoose.Model>} User object with updated password.
+ * Method for creating a time-bound, single-use token/OTP for account validation.
+ * @returns {promise.<String>} A time-bound, single-use token/OTP.
  */
-async function changePassword(newPassword) {
-  this.password = newPassword;
-  this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
-  return this.save();
-}
-
-/**
- * Method for initiating password reset when a user forgets their password
- * or doesn't have one yet (at account activation). This creates a time-
- * bound OTP/token for the current account, then stores and returns it.
- * @returns {promise.<String>} Password reset token/OTP.
- */
-async function forgotPassword() {
+async function generateOTP() {
   this.resetPwd = true;
   this.resetTTL = Date.now() + (1000 * 60 * 5); // 5 minutes validity
   this.resetOTP = uuid().slice(-7, -1); // random 6-character token
   await this.save();
   return this.resetOTP;
+}
+
+/**
+ * Method for validating an OTP/token received from a user. Checks that given OTP is
+ * valid (exists and not expired).
+ * @param {string} OTP One-Time Password/token for validation.
+ * @returns {promise.<mongoose.Model>} User object.
+ */
+async function validateOTP(OTP) {
+  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case-insensitive token
+    if (this.resetTTL < Date.now()) return { error: 'ValueError: OTP has expired' };
+    this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
+    return this.save();
+  }
+  return { error: 'ValueError: Invalid OTP' };
 }
 
 /**
@@ -80,20 +82,31 @@ async function forgotPassword() {
  * @returns {promise.<mongoose.Model>} User object with updated password.
  */
 async function resetPassword(OTP, newPassword) {
-  if (this.resetPwd && this.resetOTP === String(OTP).toLowerCase()) { // Case-insensitive token
-    if (this.resetTTL < Date.now()) return { error: 'ValueError: OTP has expired' };
-    this.password = newPassword;
-    this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
-    return this.save();
-  }
-  return { error: 'ValueError: Invalid OTP' };
+  const { error } = await this.validateOTP(OTP); // Validate OTP
+  if (error) return { error };
+
+  // Update password and return user object with updated password
+  this.password = newPassword;
+  return this.save();
+}
+
+/**
+ * Method for changing a user's password.
+ * @param {string} newPassword New password provided by the user.
+ * @returns {promise.<mongoose.Model>} User object with updated password.
+ */
+async function changePassword(newPassword) {
+  this.password = newPassword;
+  this.resetOTP = undefined; this.resetTTL = undefined; this.resetPwd = undefined;
+  return this.save();
 }
 
 module.exports = {
   validatePerson,
   getFullName,
   updateProfile,
-  forgotPassword,
+  generateOTP,
+  validateOTP,
   resetPassword,
   changePassword,
 };
