@@ -74,6 +74,7 @@ const immutables = {
 // Private attributes to be omitted from returned models in staff/student methods
 const allPrivateAttr = { __v: 0, updatedAt: 0 };
 const passwordAttr = { password: 0, resetPwd: 0, resetTTL: 0, resetOTP: 0 };
+const departmentAttr = { ...allPrivateAttr, createdAt: 0, availableCourses: 0 };
 const personPrivateAttr = {
   ...allPrivateAttr,
   ...passwordAttr,
@@ -89,6 +90,7 @@ const studentPrivateAttr = { ...personPrivateAttr, registeredCourses: 0 };
 
 // Concatenated version of private attribues for use in Mongoose project() method
 const allPrivateAttrStr = ['', ...Object.keys(allPrivateAttr)].join(' -').trim();
+const departmentPrivateAttrStr = ['', ...Object.keys(departmentAttr)].join(' -').trim();
 const personPrivateAttrStr = ['', ...Object.keys(personPrivateAttr)].join(' -').trim();
 const staffPrivateAttrStr = ['', ...Object.keys(staffPrivateAttr)].join(' -').trim();
 const studentPrivateAttrStr = ['', ...Object.keys(studentPrivateAttr)].join(' -').trim();
@@ -96,12 +98,14 @@ const studentPrivateAttrStr = ['', ...Object.keys(studentPrivateAttr)].join(' -'
 const privateAttr = {
   privateAttr: {
     all: allPrivateAttr,
+    department: departmentAttr,
     person: passwordAttr,
     staff: staffPrivateAttr,
     student: studentPrivateAttr,
   },
   privateAttrStr: {
     all: allPrivateAttrStr,
+    department: departmentPrivateAttrStr,
     person: personPrivateAttrStr,
     staff: staffPrivateAttrStr,
     student: studentPrivateAttrStr,

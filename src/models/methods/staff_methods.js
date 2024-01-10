@@ -1,8 +1,7 @@
 // Methods for Staff class/user accounts for staff
 
 const mongoose = require('mongoose');
-const { ObjectId, enums, immutables } = require('../base');
-const { privateAttr, privateAttrStr } = require('../person');
+const { ObjectId, enums, immutables, privateAttr: { privateAttr, privateAttrStr } } = require('../base');
 
 const { roles, models } = enums.staff;
 const { statuses, levels } = enums.courses;
