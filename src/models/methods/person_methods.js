@@ -21,9 +21,12 @@ function getFullName() {
  * @returns {promise.<mongoose.Model>} User object with valid updated attributes.
  */
 async function updateProfile(attributes) {
-  const mutableAttr = ['email', 'nationality', 'stateOfOrigin', 'LGA', 'phone', 'picture'];
+  const mutableAttr = ['phone', 'picture'];
+  const mutableIfNull = ['middleName', 'gender', 'nationality', 'stateOfOrigin', 'LGA'];
   for (const [key, val] of Object.entries(attributes)) {
     if (mutableAttr.includes(key)) this[key] = val;
+    // Allow a user to set these only if they haven't already been set
+    if (mutableIfNull.includes(key) && !this[key]) this[key] = val;
   }
   return this.save();
 }

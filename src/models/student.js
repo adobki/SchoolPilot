@@ -5,7 +5,7 @@ const { ObjectId, enums, immutables } = require('./base');
 const { person, validatePerson, methods: personMethods } = require('./person');
 const studentMethods = require('./methods/student_methods');
 
-const { levels, types, standings, roles } = enums.students;
+const { levels, types, standings, roles, entryMode } = enums.students;
 const { semesters } = enums.courses;
 
 // Student properties
@@ -16,6 +16,7 @@ const student = {
   type: { type: String, enum: types, default: types[0] },
   standing: { type: String, enum: standings, default: standings[0] },
   major: { type: String, required: true },
+  entryMode: { type: String, required: true, default: entryMode[0] },
   registeredCourses: [{
     level: { type: Number, enum: levels, required: true },
     semester: { type: Number, enum: semesters, required: true },
