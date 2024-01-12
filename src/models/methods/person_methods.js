@@ -102,29 +102,6 @@ async function getSchedules(startDate = '1900-01-01', endDate = '2999-12-31') {
 }
 
 /**
- * Class method for retrieving schedules for a student by date. Result is a parsed object.
- * @param {Date} startDate Lower bound of date range.
- * @param {Date} endDate Upper bound of date range.
- * @returns {Promise.<Object>}
- */
-async function getParsedSchedules(startDate = '1900-01-01', endDate = '2999-12-31') {
-  // Retrieve schedules from database
-  const schedules = await this.getSchedules(startDate, endDate);
-  if (schedules.error) return { error: schedules.error };
-  if (!schedules || !schedules.length) return {};
-
-  // Parse and return schedules data
-  return schedules.reduce((results, schedule) => {
-    const [day, month, year] = schedule.time
-      .toLocaleDateString('en-gb', { day: 'numeric', month: 'long', year: 'numeric' }).split(' ');
-    if (!results[`${month}-${year}`]) results[`${month}-${year}`] = {}; // Add slot for month and year
-    if (!results[`${month}-${year}`][day]) results[`${month}-${year}`][day] = []; // Add slot for day
-    results[`${month}-${year}`][day].push(schedule);
-    return results;
-  }, {});
-}
-
-/**
  * Class method for creating a new schedule for a student
  * @param {Object} attributes Attributes to be assigned to the new schedule.
  * @returns {Promise.<mongoose.Model>}
@@ -189,6 +166,50 @@ async function deleteSchedule(id) {
 }
 
 /**
+ * Class method for retrieving schedules by date for a user's dashboard. Result is a parsed object.
+ * @param {Date} startDate Lower bound of date range.
+ * @param {Date} endDate Upper bound of date range.
+ * @returns {Promise.<Object>}
+ */
+async function getParsedSchedules(startDate = '1900-01-01', endDate = '2999-12-31') {
+  // Retrieve schedules from database
+  const schedules = await this.getSchedules(startDate, endDate);
+  if (schedules.error) return { error: schedules.error };
+  if (!schedules || !schedules.length) return {};
+
+  // Parse and return schedules data
+  return schedules.reduce((results, schedule) => {
+    const [day, month, year] = schedule.time
+      .toLocaleDateString('en-gb', { day: 'numeric', month: 'long', year: 'numeric' }).split(' ');
+    if (!results[`${month}-${year}`]) results[`${month}-${year}`] = {}; // Add slot for month and year
+    if (!results[`${month}-${year}`][day]) results[`${month}-${year}`][day] = []; // Add slot for day
+    results[`${month}-${year}`][day].push(schedule);
+    return results;
+  }, {});
+}
+
+/**
+ * Class method for retrieving projects by date for a user's dashboard. Result is a parsed object.
+ * @returns {Promise.<Object>}
+ */
+async function getParsedProjects() {
+  // Retrieve projects from database
+  const projects = await this.getProjects();
+  if (projects.error) return { error: projects.error };
+  if (!projects || !projects.length) return {};
+
+  // Parse and return projectss data
+  return projects.reduce((results, project) => {
+    const [day, month, year] = project.deadline
+      .toLocaleDateString('en-gb', { day: 'numeric', month: 'long', year: 'numeric' }).split(' ');
+    if (!results[`${month}-${year}`]) results[`${month}-${year}`] = {}; // Add slot for month and year
+    if (!results[`${month}-${year}`][day]) results[`${month}-${year}`][day] = []; // Add slot for day
+    results[`${month}-${year}`][day].push(project);
+    return results;
+  }, {});
+}
+
+/**
  * Method for getting data for populating a user's dashboard.
  * @returns {promise.<mongoose.Model[]>}
  */
@@ -207,8 +228,8 @@ async function getDashboardData() {
 
   // Add dashboard data to user object and return it
   user.faculty = user.department.faculty; delete user.department.faculty;
-  user.projects = await this.getProjects();
   user.schedules = await this.getParsedSchedules();
+  user.projects = await this.getParsedProjects();
   return user;
 }
 
@@ -220,9 +241,10 @@ module.exports = {
   resetPassword,
   changePassword,
   getSchedules,
-  getParsedSchedules,
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  getParsedSchedules,
+  getParsedProjects,
   getDashboardData,
 };
