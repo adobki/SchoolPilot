@@ -41,6 +41,7 @@ staffSchema.methods.updateExisting = methods.updateExisting;
 staffSchema.methods.deleteExisting = methods.deleteExisting;
 staffSchema.methods.createMany = methods.createMany;
 staffSchema.methods.assignCourses = methods.assignCourses;
+staffSchema.methods.approveRecord = methods.approveRecord;
 staffSchema.methods.getAvailableCourses = methods.getAvailableCourses;
 staffSchema.methods.setAvailableCourses = methods.setAvailableCourses;
 staffSchema.methods.unsetAvailableCourses = methods.unsetAvailableCourses;
