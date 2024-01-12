@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums, immutables } = require('./base');
-const { person, methods: personMethods } = require('./person');
+const { person, validatePerson, methods: personMethods } = require('./person');
 const studentMethods = require('./methods/student_methods');
 
 const { levels, types, standings, roles } = enums.students;
@@ -32,7 +32,7 @@ for (const [methodName, method] of Object.entries(personMethods)) {
 }
 
 // Validations and constraints for creating and updating a student
-studentSchema.pre('validate', personMethods.validatePerson);
+studentSchema.pre('validate', validatePerson);
 
 // Getter for student's full name
 studentSchema.virtual('name').get(personMethods.getFullName);

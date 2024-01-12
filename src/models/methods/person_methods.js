@@ -2,29 +2,9 @@
 
 const mongoose = require('mongoose');
 const { v4: uuid } = require('uuid');
-const { ObjectId, enums, privileges, immutables, privateAttr: attr } = require('../base');
+const { ObjectId, immutables, privateAttr: attr } = require('../base');
 
 const { privateAttr, privateAttrStr } = attr;
-const { statuses } = enums.students;
-
-/**
- * Validations and constraints for user accounts. Enforces some
- * default values for account creation/updating for compliance
- * with the business logic, security, or both in some cases.
- */
-function validatePerson() {
-  // Ensure new person has defaults where applicable
-  if (this.isNew) {
-    [this.status] = statuses;
-    this.password = undefined;
-    this.resetPwd = undefined; this.resetTTL = undefined; this.resetOTP = undefined;
-  } else {
-    // Activate a new user account when the user sets a password
-    this.status = this.password && this.status === statuses[0] ? statuses[1] : this.status;
-  }
-  // Set staff privileges based on assigned role (and prevent manual reassignment)
-  this.privileges = privileges[this.role];
-}
 
 /**
  * Getter for `name` and `fullname` virtual properties. Returns full name
@@ -233,7 +213,6 @@ async function getDashboardData() {
 }
 
 module.exports = {
-  validatePerson,
   getFullName,
   updateProfile,
   generateOTP,
