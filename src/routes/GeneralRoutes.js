@@ -1,6 +1,7 @@
+/* eslint-disable jest/require-hook */
 // create the Express server:
 const express = require('express');
-const cors = require('cors')
+const cors = require('cors');
 // router are used to separate the routes from the main server file
 const genRouter = express.Router();
 

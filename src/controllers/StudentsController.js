@@ -41,11 +41,17 @@ class StudentController {
       // check if the user already exists
       const existingUser = await Student.findOne({ email });
       if (!existingUser) {
-        return res.status(400).json({ error: 'User account doesn\'t exist, please contact admin' });
+        return res.status(400).json({
+          error: 'User account doesn\'t exist',
+          resolve: 'Please contact Admin',
+        });
       }
       // check if user object profile is already activated, if true redirect to login instead
       if (existingUser.status !== statuses[0]) {
-        return res.status(400).json({ error: 'User already verified\nPlease login' });
+        return res.status(400).json({
+          error: 'User already verified',
+          resolve: 'Please login',
+        });
       }
       // generate the token
       const token = await existingUser.generateOTP();
@@ -98,7 +104,10 @@ class StudentController {
       }
       // check if user object profile is already activated, if true redirect to login instead
       if (existingUser.status !== statuses[0]) {
-        return res.status(400).json({ error: 'User already verified\nPlease login' });
+        return res.status(400).json({
+          error: 'User already verified',
+          resolve: 'Please login',
+        });
       }
       // hash the password using bcrypt
       const hashedPwd = await bcrypt.hash(password, 12);
@@ -113,12 +122,15 @@ class StudentController {
       // return dashboard data
       const Dashboard = await user.getDashboardData();
       if (!Dashboard) {
-        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
-      if (!xToken) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+      if (xToken.error) {
+        return res.status(500).json({
+          error: 'Internal Server Error',
+          msg: xToken.error,
+        });
       }
       return res.status(201).json({
         message: 'Account activated successfully',
@@ -176,7 +188,7 @@ class StudentController {
       }
       const DashBoard = await updatedObj.getDashboardData();
       if (!DashBoard) {
-        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'User profile updated successfully',
@@ -211,10 +223,13 @@ class StudentController {
       }
       const user = await Student.findOne({ matricNo });
       if (!user) {
-        return res.status(400).json({ error: 'MatricNo not linked to any user' });
+        return res.status(400).json({ error: 'MatricNo not linked to any student' });
       }
       if (user.status !== statuses[1]) {
-        return res.status(400).json({ error: 'User not authorized\nPlease activate account' });
+        return res.status(400).json({
+          error: 'User not authorized',
+          resolve: 'Please activate your account',
+        });
       }
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
@@ -231,7 +246,7 @@ class StudentController {
       // const { stdData, dptData, facData, courseData } = await authClient.DashboardData(user);
       const Dashboard = await user.getDashboardData();
       if (!Dashboard) {
-        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Login successful',
@@ -248,7 +263,7 @@ class StudentController {
   static async logout(req, res) {
     let rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
-      return res.staus(401).json({
+      return res.status(401).json({
         error: rdfxn.error,
       });
     }
@@ -293,6 +308,7 @@ class StudentController {
       if (user.status !== statuses[1]) {
         return res.status(400).json({
           error: 'User not authorized',
+          resolve: 'Please activate your account',
         });
       }
       // Generate and send password reset token
@@ -305,7 +321,7 @@ class StudentController {
       try {
         await mailClient.sendToken(user);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -323,8 +339,9 @@ class StudentController {
         });
       }
       if (user.status !== statuses[1]) {
-        res.status(400).json({
+        return res.status(400).json({
           error: 'User not authorized',
+          resolve: 'Please activate your account',
         });
       }
       // Generate and send password reset token
@@ -332,7 +349,7 @@ class StudentController {
       try {
         await mailClient.sendToken(user);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -352,6 +369,7 @@ class StudentController {
       if (user.status !== statuses[1]) {
         return res.status(400).json({
           error: 'User not authorized',
+          resolve: 'Please activate your account',
         });
       }
       // Generate and send password reset token
@@ -359,7 +377,7 @@ class StudentController {
       try {
         await mailClient.sendToken(user);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -402,10 +420,13 @@ class StudentController {
       }
       // check if user object profile is already activated, if true redirect to login instead
       if (existingUser.status !== statuses[1]) {
-        return res.status(400).json({ error: 'User not verified\nPlease signin' });
+        return res.status(400).json({
+          error: 'User not authorized',
+          resolve: 'Please activate your account',
+        });
       }
       // hash the password using bcrypt
-      const hashedPwd = await bcrypt.hash(password, 12);
+      const hashedPwd = await bcrypt.hash(password, 10);
       let user = await existingUser.validateOTP(token);
       if (user.error) {
         return res.status(404).json({ error: user.error });
@@ -440,7 +461,7 @@ class StudentController {
   static async setChangePassword(req, res) {
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
-      return res.staus(401).json({
+      return res.status(401).json({
         error: rdfxn.error,
       });
     }
@@ -448,6 +469,13 @@ class StudentController {
     const user = await Student.findById(ID);
     if (!user) {
       return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if user object profile is already activated, if true redirect to login instead
+    if (user.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'User not authorized',
+        resolve: 'Please activate your account',
+      });
     }
     const { email, oldPassword, newPassword } = req.body;
     if (!email) {
@@ -463,9 +491,12 @@ class StudentController {
     if (!await dbClient.isAlive()) {
       return res.status(500).json({ error: 'Database connection failed' });
     }
-    // check if user object profile is already activated, if true redirect to login instead
+    // check if student object profile is already activated, if true redirect to login instead
     if (user.status !== statuses[1]) {
-      return res.status(400).json({ error: 'User not verified\nPlease signin' });
+      return res.status(400).json({
+        error: 'Student not verified',
+        resolve: 'Please signin to activate your profile',
+      });
     }
     // compare old password to the hashed password in the database
     const isMatch = await bcrypt.compare(oldPassword, user.password);

@@ -117,11 +117,11 @@ class AuthController {
     // retrive the user token, if not found raise 401
     const xToken = req.get('X-Token');
     if (!xToken) {
-      return ({ error: 'X-Token is required in the header'});
+      return ({ error: 'X-Token is required in the header' });
     }
     // retriee the basicAuthToken from reids
     const ID = await this.getUserID(xToken);
-    if (!ID) {
+    if (ID.error) {
       return ({ error: 'X-Token credentials is not associted with any object' });
     }
     return { ID, xToken };
