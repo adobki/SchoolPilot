@@ -9,6 +9,7 @@ const statuses = ['init', 'active', 'deactivated'];
 const levels = [100, 200, 300, 400, 500, 600];
 const semesters = [1, 2];
 const types = ['UG', 'PG'];
+const entryMode = ['UTME', 'DE', 'FP'];
 const standings = ['good', 'withdrawn', 'graduated', 'suspended', 'rusticated'];
 const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.', 'Emeritus'];
 const roles = ['Lecturer', 'HOD', 'Dean', 'Admin', 'SuperAdmin'];
@@ -18,7 +19,7 @@ const models = ['Faculty', 'Department', 'Course', 'Project', 'Record', 'Staff',
 const enums = {
   courses: { levels, semesters, statuses: approvals },
   staff: { genders, statuses, titles, roles, models },
-  students: { genders, statuses, levels, types, standings, roles: ['Student'] },
+  students: { genders, statuses, levels, types, standings, roles: ['Student'], entryMode },
 };
 
 // Privileges for staff accounts by role

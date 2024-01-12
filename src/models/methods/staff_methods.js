@@ -242,6 +242,33 @@ async function assignCourses(id, courses) {
 }
 
 /**
+ * Class method for approving a record (result) submitted for a course by a lecturer.
+ * Records go through two stages of approval: HOD first, then Dean. In that order.
+ * @param {ObjectId} id ID of record to be approved.
+ * @returns {Promise.<mongoose.model>}
+ */
+async function approveRecord(id) {
+  if (!this.privileges.approveResult) return { error: 'Access denied' };
+  if (!ObjectId.isValid(id)) return { error: 'ValueError: Invalid id' };
+
+  // Retrieve record from database
+  const record = await mongoose.model('Record').findById(id)
+    .populate('data.student createdBy', `${privateAttrStr.student} ${privateAttrStr.staff}`);
+  if (!record) return { error: `ValueError: Record with id=${id} not found` };
+
+  // Check approval status
+  const { status } = record;
+  if (status === statuses.at(-1)) return { error: 'Record has already been approved' };
+  if (status === this.role) return { error: 'Record has already been approved by you' };
+  if (status === statuses[0] && this.role !== roles[1]
+  ) return { error: 'Record needs to be approved by the HOD first' };
+
+  // Approve record and return it
+  record.status = statuses[statuses.findIndex(status) + 1];
+  return record.save();
+}
+
+/**
  * Class method for getting all available courses by level in a faculty/department.
  * This data is used by students for course registration, and is available to all staff.
  * @param {ObjectId} _id ID of department or faculty.
@@ -429,6 +456,7 @@ module.exports = {
   deleteExisting,
   createMany,
   assignCourses,
+  approveRecord,
   getAvailableCourses,
   setAvailableCourses,
   unsetAvailableCourses,

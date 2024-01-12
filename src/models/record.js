@@ -7,17 +7,14 @@ const { ObjectId, enums } = require('./base');
 const record = {
   course: { type: ObjectId, ref: 'Course', required: true },
   year: { type: Number, required: true },
+  status: { type: String, enum: enums.courses.statuses },
+  createdBy: { type: ObjectId, ref: 'Staff', required: true },
   data: [{
     student: { type: ObjectId, ref: 'Student', required: true },
     ca: { type: Number, required: true },
     exam: { type: Number, required: true },
     _id: { type: ObjectId }, // This hides _id in the embedded object
   }],
-  createdBy: { type: ObjectId, ref: 'Staff', required: true },
-  status: {
-    type: String,
-    enum: enums.courses.statuses,
-  },
 };
 const recordSchema = new mongoose.Schema({ ...record }, { timestamps: true });
 
