@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const { ObjectId, enums, privileges, immutables } = require('./base');
-const { person, methods: personMethods } = require('./person');
+const { person, validatePerson, methods: personMethods } = require('./person');
 const methods = require('./methods/staff_methods');
 
 const { titles, roles } = enums.staff;
@@ -29,7 +29,7 @@ for (const [methodName, method] of Object.entries(personMethods)) {
 }
 
 // Validations and constraints for creating and updating a staff
-staffSchema.pre('validate', personMethods.validatePerson);
+staffSchema.pre('validate', validatePerson);
 
 // Getter for staff full name
 staffSchema.virtual('name').get(personMethods.getFullName);
@@ -41,6 +41,7 @@ staffSchema.methods.updateExisting = methods.updateExisting;
 staffSchema.methods.deleteExisting = methods.deleteExisting;
 staffSchema.methods.createMany = methods.createMany;
 staffSchema.methods.assignCourses = methods.assignCourses;
+staffSchema.methods.approveRecord = methods.approveRecord;
 staffSchema.methods.getAvailableCourses = methods.getAvailableCourses;
 staffSchema.methods.setAvailableCourses = methods.setAvailableCourses;
 staffSchema.methods.unsetAvailableCourses = methods.unsetAvailableCourses;
