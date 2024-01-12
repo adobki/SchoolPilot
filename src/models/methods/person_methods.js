@@ -214,7 +214,7 @@ async function deleteSchedule(id) {
  */
 async function getDashboardData() {
   // Fetch department and faculty data from database
-  this.department = await mongoose.model('Department').findById(this.department.id)
+  this.department = await mongoose.model('Department').findById(this.department._id)
     .select(privateAttrStr.department).populate('faculty', privateAttrStr.department);
 
   // Cast user to object without private attributes
@@ -227,8 +227,8 @@ async function getDashboardData() {
 
   // Add dashboard data to user object and return it
   user.faculty = user.department.faculty; delete user.department.faculty;
-  user.schedules = await this.getSchedules();
   user.projects = await this.getProjects();
+  user.schedules = await this.getParsedSchedules();
   return user;
 }
 
