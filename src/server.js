@@ -1,3 +1,4 @@
+/* eslint-disable jest/require-hook */
 /* eslint-disable no-unused-vars */
 /* eslint-disable import/newline-after-import */
 //  create the Express server:
@@ -8,7 +9,7 @@ const port = process.env.EXPRESS_PORT || 3500;
 const router = require('./routes/index');
 const dbClient = require('./utils/db'); // Make sure to import your DB client
 const redisClient = require('./utils/redis');
-const { swaggerUi, specs } = require('../src/utils/swagger');
+const { swaggerUi, specs } = require('./utils/swagger');
 
 // it should parse the body of the request as a JSON object for all HTTP requests
 app.use(express.json());
@@ -18,7 +19,6 @@ app.use(router);
 
 // Serve Swagger UI documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-
 
 // Initialize the database connection when the application starts
 async function startServer() {

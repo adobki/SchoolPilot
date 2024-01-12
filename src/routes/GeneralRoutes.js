@@ -6,14 +6,14 @@ const genRouter = express.Router();
 
 const corsOptions = {
   origin: '*', // allow all origins for now
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
   optionsSuccessStatus: 204,
   credentials: true,
-  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Auth-Token", "Authorization", "X-Token"],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'X-Auth-Token', 'Authorization', 'X-Token'],
 };
 // use Cors
-genRouter.use(cors( corsOptions ));
+genRouter.use(cors(corsOptions));
 
 // import the controller
 const genController = require('../controllers/GeneralController');

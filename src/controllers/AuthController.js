@@ -1,10 +1,8 @@
+/* eslint-disable consistent-return */
 const { v4: uuidv4 } = require('uuid');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
- const { Student } = require('../models/student');
-const { Department } = require('../models/department');
- const { Course } = require('../models/course');
-const { Faculty } = require('../models/faculty');
+// const { Student } = require('../models/student');
 
 // token key expiration 24hrs
 const EXP = 60 * 60 * 24;
@@ -29,7 +27,7 @@ class AuthController {
     });
   }
 
-  static async genHealth (req, res, portals) {
+  static async genHealth(req, res, portals) {
     // loop through each url in the list
     const data = [];
     for (const portal of portals) {
@@ -40,7 +38,7 @@ class AuthController {
         return res.status(500).json({ error: 'Database connection failed' });
       }
       if (!redisStatus) {
-        return res.status(500).json({ error: 'Redis connection failed' });        
+        return res.status(500).json({ error: 'Redis connection failed' });
       }
       data.push({
         portal,
@@ -61,29 +59,27 @@ class AuthController {
       return token;
     } catch (err) {
       console.error('Error creating XToken:', err);
-      throw new Error('Failed to create XToken');
+      return ({ error: 'Failed to create XToken' });
     }
   }
 
   static async getUserID(xToken) {
-    try {
-      const key = `auth_${xToken}`;
-      const userID = await redisClient.get(key);
-      return userID || null;
-    } catch (err) {
-      console.error('Error getting UserID:', err);
-      throw new Error('Failed to get UserID');
+    const key = `auth_${xToken}`;
+    const userID = await redisClient.get(key);
+    if (!userID) {
+      return ({ error: 'Failed to get UserID' });
     }
+    return userID;
   }
 
   static async deleteXToken(xToken) {
     try {
       const key = `auth_${xToken}`;
       await redisClient.del(key);
-      return;
+      return { success: true };
     } catch (err) {
       console.error('Error deleting XToken:', err);
-      throw new Error('Failed to delete XToken');
+      return ({ error: 'Failed to delete XToken' });
     }
   }
 
@@ -103,22 +99,16 @@ class AuthController {
   static async checkConn(req, res) {
     // check authorization header
     if (!req.headers.authorization) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
+      return { error: 'Basic Authorization header is required' };
     }
-    // check if Authorization header starts with Baic + space
+    // check if Authorization header starts with Basic + space
     if (!req.headers.authorization.startsWith('Basic ')) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
+      return { error: 'Authorization Header encryption improperly formatted' };
     }
     // get the token
     const encryptToken = req.headers.authorization.split(' ')[1];
     if (!encryptToken) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
+      return { error: 'Encrypted information not found' };
     }
     return encryptToken;
   }
@@ -127,119 +117,106 @@ class AuthController {
     // retrive the user token, if not found raise 401
     const xToken = req.get('X-Token');
     if (!xToken) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
+      return ({ error: 'X-Token is required in the header'});
     }
-    try {
-      // retriee the basicAuthToken from reids
-      const userID = await this.getUserID(xToken);
-      if (!userID) {
-        res.status(401).json({
-          error: 'Unauthorized',
-        });
-      }
-      // retreive the user object base on the token
-      if (!dbClient.isAlive()) {
-        res.status(500).json({
-          error: 'Database is not alive',
-        });
-      }
-      return { userID, xToken };
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to login' });
+    // retriee the basicAuthToken from reids
+    const ID = await this.getUserID(xToken);
+    if (!ID) {
+      return ({ error: 'X-Token credentials is not associted with any object' });
     }
+    return { ID, xToken };
   }
-
 
   static async decodeLoginToken(token) {
     // decode the token to get the matricNo and password
-    try {
-      const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
-      if (decodedToken.length !== 2) {
-        return null;
-      }
-      const matricNo = decodedToken[0];
-      const password = decodedToken[1];
-      return { matricNo, password };
-    } catch (err) {
-      return null;
+    const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
+    if (decodedToken.length !== 2) {
+      return ({ error: 'Inconsistent Encryption Algorithm, ensure Base64 encryption' });
     }
+    const matricNo = decodedToken[0];
+    const password = decodedToken[1];
+    return { matricNo, password };
+  }
+
+  static async staffDecodeLoginToken(token) {
+    // decode the token to get the matricNo and password
+    const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
+    if (decodedToken.length !== 2) {
+      return ({ error: 'Inconsistent Encryption Algorithm, ensure Base64 encryption' });
+    }
+    const staffId = decodedToken[0];
+    const password = decodedToken[1];
+    return { staffId, password };
   }
 
   static async decodeActivateProfileToken(token) {
     // decode the token to get the email and password
-    try {
-      const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
-      if (decodedToken.length !== 2) {
-        return null;
-      }
-      const email = decodedToken[0];
-      const password = decodedToken[1];
-      return { email, password };
-    } catch (err) {
-      return null;
+    const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
+    if (decodedToken.length !== 2) {
+      return ({ error: 'Inconsistent Encryption Algorithm, ensure Base64 encryption' });
     }
+    const email = decodedToken[0];
+    const password = decodedToken[1];
+    return ({ email, password });
   }
-  static async getDashboardData(obj) {
-    const userObj = obj.toObject();
-    const exclude = ['password', 'createdAt', 'updatedAt', '__v', 'resetOTP', 'resetTTL', 'resetPwd', 'department', 'registeredCourses', 'faculty', 'availableCourses'];
-    const stdData = {};
-    const facData = {};
-    const dptData = {};
-    const courseData = [];
-    const regCourseData = {};
 
-    for (const key in userObj) {
-      if (!exclude.includes(key)) {
-        stdData[key] = userObj[key];
-      }
-    }
-    const dpt = await Department.findById(obj.department);
-    if (!dpt) {
-      throw new Error('Department not found');
-    }
-    const dptObj = dpt.toObject();
-    for (const key in dptObj) {
-      if (!exclude.includes(key)) {
-        dptData[key] = dptObj[key];
-      }
-    }
+  // static async DashboardData(obj) {
+  //   const userObj = obj.toObject();
+  //   const stdData = {};
+  //   const facData = {};
+  //   const dptData = {};
+  //   const courseData = [];
+  //   const regCourseData = {};
 
-    const fac = await Faculty.findById(dpt.faculty);
-    if (!fac) {
-      throw new Error('Faculty not found');
-    }
-    const factObj = fac.toObject();
-    for (const key in factObj) {
-      if (!exclude.includes(key)) {
-        facData[key] = factObj[key];
-      }
-    }
+  //   for (const key in userObj) {
+  //     if (!exclude.includes(key)) {
+  //       stdData[key] = userObj[key];
+  //     }
+  //   }
+  //   const dpt = await Department.findById(obj.department);
+  //   if (!dpt) {
+  //     throw new Error('Department not found');
+  //   }
+  //   const dptObj = dpt.toObject();
+  //   for (const key in dptObj) {
+  //     if (!exclude.includes(key)) {
+  //       dptData[key] = dptObj[key];
+  //     }
+  //   }
 
-    const arrRegCourses = obj.registeredCourses;
-    if (!arrRegCourses) {
-      return { stdData, dptData, facData, courseData };
-    }
-    for (const courseObjects of arrRegCourses) {
-      const { courses } = courseObjects;
-      for (const objID of courses) {
-        const course = await Course.findById(objID);
-        if (!course) {
-          throw new Error('Course not found');
-        }
-        const courseObj = course.toObject();
-        for (const key in courseObj) {
-          if (!exclude.includes(key)) {
-            regCourseData[key] = courseObj[key];
-          }
-        }
-        courseData.push(regCourseData);
-      }
-    }
-    return { stdData, dptData, facData, courseData };
-  }
+  //   const fac = await Faculty.findById(dpt.faculty);
+  //   if (!fac) {
+  //     throw new Error('Faculty not found');
+  //   }
+  //   const factObj = fac.toObject();
+  //   for (const key in factObj) {
+  //     if (!exclude.includes(key)) {
+  //       facData[key] = factObj[key];
+  //     }
+  //   }
+
+  //   const arrRegCourses = obj.registeredCourses;
+  //   if (!arrRegCourses) {
+  //     return { stdData, dptData, facData, courseData };
+  //   }
+  //   for (const courseObjects of arrRegCourses) {
+  //     const { courses } = courseObjects;
+  //     for (const objID of courses) {
+  //       const course = await Course.findById(objID);
+  //       if (!course) {
+  //         throw new Error('Course not found');
+  //       }
+  //       const courseObj = course.toObject();
+  //       for (const key in courseObj) {
+  //         if (!exclude.includes(key)) {
+  //           regCourseData[key] = courseObj[key];
+  //         }
+  //       }
+  //       courseData.push(regCourseData);
+  //     }
+  //   }
+  //   return { stdData, dptData, facData, courseData };
+  // }
 }
 
 module.exports = AuthController;
