@@ -9,8 +9,6 @@
 const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
-// const { Department } = require('../models/department');
-// const { Faculty } = require('../models/faculty');
 const { enums, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
 const { statuses } = enums.students;

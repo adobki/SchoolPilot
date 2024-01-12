@@ -6,9 +6,7 @@ const bcrypt = require('bcrypt');
 // import the staff model
 const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
-const redisClient = require('../utils/redis');
 const { Staff } = require('../models/staff');
-const { Student } = require('../models/student');
 
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
@@ -534,7 +532,7 @@ class StaffController {
     if (!staff) {
       return res.status(404).json({ error: 'Staff Object not found' });
     }
-    // check if user object profile is already activated, if true redirect to login instead
+    // check if user object profile is already activated, if true, redirect to login instead
     if (staff.status !== statuses[1]) {
       return res.status(400).json({
         error: 'Staff not authorized',
