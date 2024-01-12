@@ -39,11 +39,17 @@ class StaffController {
       // check if the staff already exists
       const existingStaff = await Staff.findOne({ email });
       if (!existingStaff) {
-        return res.status(400).json({ error: 'Staff account doesn\'t exist, please contact admin' });
+        return res.status(400).json({
+          error: 'Staff account doesn\'t exist',
+          resolve: 'Please contact Admin',
+        });
       }
       // check if staff object profile is already activated, if true redirect to login instead
       if (existingStaff.status !== statuses[0]) {
-        return res.status(400).json({ error: 'Staff already verified\nPlease login' });
+        return res.status(400).json({
+          error: 'Staff already verified',
+          resolve: 'Please login',
+        });
       }
       // generate the token
       const token = await existingStaff.generateOTP();
@@ -96,7 +102,10 @@ class StaffController {
       }
       // check if staff object profile is already activated, if true redirect to login instead
       if (existingStaff.status !== statuses[0]) {
-        return res.status(400).json({ error: 'Staff already verified\nPlease login' });
+        return res.status(400).json({
+          error: 'Staff already verified',
+          resolve: 'Please login',
+        });
       }
       // hash the password using bcrypt
       const hashedPwd = await bcrypt.hash(password, 12);
@@ -115,8 +124,11 @@ class StaffController {
       }
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(staff.id);
-      if (!xToken) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+      if (xToken.error) {
+        return res.status(500).json({
+          error: 'Internal Server Error',
+          msg: xToken.error,
+        });
       }
       return res.status(201).json({
         message: 'Account activated successfully',
@@ -155,7 +167,10 @@ class StaffController {
         return res.status(400).json({ error: 'Staff not found' });
       }
       if (staff.status !== statuses[1]) {
-        return res.status(400).json({ error: 'Staff not authorized\nPlease activate account first' });
+        return res.status(400).json({
+          error: 'Staff not authorized',
+          resolve: 'Please activate your account',
+        });
       }
       const isMatch = await bcrypt.compare(password, staff.password);
       if (!isMatch) {
@@ -191,24 +206,28 @@ class StaffController {
     const token = req.get('X-Token');
     if (!token) {
       return res.status(401).json({
-        error: 'Unauthorized',
+        error: 'Token credentials is Unauthorized',
       });
     }
     // get the staff id from the redis client
     const staffId = await authClient.getUserID(token);
-    if (!staffId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!staffId.error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        msg: staffId.error,
+      });
     }
     // check if server is up before verifying
-    try {
-      await dbClient.isAlive();
-    } catch (err) {
+    if (!await dbClient.isAlive()) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
     // validate if the token and object from the request are same
     const staff = await Staff.findById({ _id: staffId });
     if (!staff) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({
+        error: 'Unauthorized',
+        msg: 'Token is not linked to any staff account',
+      });
     }
     // update the staff profile
     // Get the updated attributes from the request body
@@ -223,11 +242,15 @@ class StaffController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update staff profile' });
       }
+      const DashBoard = await updatedObj.getDashboardData();
+      if (!DashBoard) {
+        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
       return res.status(201).json({
         message: 'Staff profile updated successfully',
         email: updatedObj.email,
         xToken: token,
-        Data: updatedObj,
+        DashBoard,
       });
     } catch (err) {
       return res.status(500).json({ error: 'Failed to update staff profile' });
@@ -237,7 +260,7 @@ class StaffController {
   static async logout(req, res) {
     let rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
-      return res.staus(401).json({
+      return res.status(401).json({
         error: rdfxn.error,
       });
     }
@@ -282,6 +305,7 @@ class StaffController {
       if (staff.status !== statuses[1]) {
         return res.status(400).json({
           error: 'Staff not authorized',
+          resolve: 'Please activate your account',
         });
       }
       // Generate and send password reset token
@@ -294,7 +318,7 @@ class StaffController {
       try {
         await mailClient.sendToken(staff);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -322,7 +346,7 @@ class StaffController {
       try {
         await mailClient.sendToken(staff);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -343,6 +367,7 @@ class StaffController {
       if (staff.status !== statuses[1]) {
         return res.status(400).json({
           error: 'Staff not authorized',
+          resolve: 'Please activate your account',
         });
       }
       // Generate and send password reset token
@@ -350,7 +375,7 @@ class StaffController {
       try {
         await mailClient.sendToken(staff);
       } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
           error: 'Mail Client Error',
         });
       }
@@ -393,10 +418,13 @@ class StaffController {
       }
       // check if staff object profile is already activated, if true redirect to login instead
       if (existingStaff.status !== statuses[1]) {
-        return res.status(400).json({ error: 'Staff not verified\nPlease signin' });
+        return res.status(400).json({
+          error: 'Staff not authorized',
+          resolve: 'Please activate your account',
+        });
       }
       // hash the password using bcrypt
-      const hashedPwd = await bcrypt.hash(password, 12);
+      const hashedPwd = await bcrypt.hash(password, 10);
       let staff = await existingStaff.validateOTP(token);
       if (staff.error) {
         return res.status(404).json({ error: staff.error });
@@ -431,7 +459,7 @@ class StaffController {
   static async setChangePassword(req, res) {
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
-      return res.staus(401).json({
+      return res.status(401).json({
         error: rdfxn.error,
       });
     }
@@ -456,7 +484,10 @@ class StaffController {
     }
     // check if staff object profile is already activated, if true redirect to login instead
     if (staff.status !== statuses[1]) {
-      return res.status(400).json({ error: 'Staff not verified\nPlease signin' });
+      return res.status(400).json({
+        error: 'Staff not verified',
+        resolve: 'Please signin to activate profile',
+      });
     }
     // compare old password to the hashed password in the database
     const isMatch = await bcrypt.compare(oldPassword, staff.password);

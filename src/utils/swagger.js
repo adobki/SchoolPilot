@@ -22,14 +22,12 @@ const options = {
       {
         url: 'http://localhost:4000/',
         description: 'local server',
-      }
+      },
     ],
   },
   apis: ['./src/routes/*.js'],
-  
 };
 
 const specs = swaggerJsDoc(options);
 
 module.exports = { specs, swaggerUi };
-
