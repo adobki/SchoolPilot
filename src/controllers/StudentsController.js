@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable import/newline-after-import */
 /* eslint-disable no-useless-return */
 /* eslint-disable no-undef */
@@ -9,11 +10,9 @@ const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
 // const { Department } = require('../models/department');
-const { Course } = require('../models/course');
 // const { Faculty } = require('../models/faculty');
 const { enums, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
-const redisClient = require('../utils/redis');
 const { statuses } = enums.students;
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
@@ -49,34 +48,44 @@ class StudentController {
         return res.status(400).json({ error: 'User already verified\nPlease login' });
       }
       // generate the token
-      const token = await existingUser.forgotPassword();
+      const token = await existingUser.generateOTP();
       if (!token) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({
+          error: 'Internal Server Error',
+          msg: 'Failed to generate activation token',
+        });
       }
       // send mail to the user object base on the token
       await mailClient.sendToken(existingUser);
-      res.status(201).json({
+      return res.status(201).json({
         message: 'Activaton token sent successfully',
         email: existingUser.email,
         activationToken: token,
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to signup user account' });
+      return res.status(500).json({ error: 'Failed to signup user account' });
     }
   }
 
   static async activateProfile(req, res) {
     const { token } = req.body;
     if (!token) {
-      return res.status(400).json({ error: 'Missing token' });
+      return res.status(400).json({ error: 'Missing activation token' });
     }
     const encryptToken = await authClient.checkConn(req, res);
-    const { email, password } = await authClient.decodeActivateProfileToken(encryptToken);
+    if (encryptToken.error) {
+      return res.status(400).json({ error: encryptToken.error });
+    }
+    const fchk = await authClient.decodeActivateProfileToken(encryptToken);
+    if (fchk.error) {
+      return res.status(400).json({ error: fchk.error });
+    }
+    const { email, password } = fchk;
     if (!email) {
-      return res.status(400).json({ error: 'Missing email' });
+      return res.status(400).json({ error: 'Missing email from the encryption' });
     }
     if (!password) {
-      return res.status(400).json({ error: 'Missing password' });
+      return res.status(400).json({ error: 'Missing password from the encryption' });
     }
     try {
       // check if server is up before verifying
@@ -85,7 +94,7 @@ class StudentController {
       }
       const existingUser = await Student.findOne({ email });
       if (!existingUser) {
-        return res.status(400).json({ error: 'Invalid token' });
+        return res.status(400).json({ error: 'Invalid token for user credentials' });
       }
       // check if user object profile is already activated, if true redirect to login instead
       if (existingUser.status !== statuses[0]) {
@@ -93,21 +102,29 @@ class StudentController {
       }
       // hash the password using bcrypt
       const hashedPwd = await bcrypt.hash(password, 12);
-      const user = await existingUser.resetPassword(token, hashedPwd);
+      let user = await existingUser.validateOTP(token);
       if (user.error) {
         return res.status(404).json({ error: user.error });
       }
-      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);
+      user = await user.changePassword(hashedPwd);
+      if (!user) {
+        return res.status(400).json({ error: 'Failed to activate user profile' });
+      }
+      // return dashboard data
+      const Dashboard = await user.getDashboardData();
+      if (!Dashboard) {
+        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
-      res.status(201).json({
+      if (!xToken) {
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+      return res.status(201).json({
         message: 'Account activated successfully',
         email: existingUser.email,
         xToken,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,        
+        Dashboard,
       });
       // needed for the user profile activation
     } catch (err) {
@@ -120,25 +137,29 @@ class StudentController {
     // extract the token from the header X-Token
     const token = req.get('X-Token');
     if (!token) {
-      res.status(401).json({
-        error: 'Unauthorized',
+      return res.status(401).json({
+        error: 'Token credential is Unauthorized',
       });
     }
     // get the user id from the redis client
     const userID = await authClient.getUserID(token);
-    if (!userID) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (userID.error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        msg: userID.error,
+      });
     }
     // check if server is up before verifying
-    try {
-      await dbClient.isAlive();
-    } catch (err) {
+    if (!await dbClient.isAlive()) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
     // validate if the token and object from the request are same
     const userObj = await Student.findById({ _id: userID });
     if (!userObj) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({
+        error: 'Unauthorized',
+        msg: 'Token is not linked to any user account',
+      });
     }
     // update the user profile
     // Get the updated attributes from the request body
@@ -153,25 +174,31 @@ class StudentController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update user profile' });
       }
-      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedObj);
-      res.status(201).json({
+      const DashBoard = await updatedObj.getDashboardData();
+      if (!DashBoard) {
+        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
+      return res.status(201).json({
         message: 'User profile updated successfully',
         email: updatedObj.email,
         xToken: token,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,
+        DashBoard,
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to update user profile' });
+      return res.status(500).json({ error: 'Failed to update user profile' });
     }
   }
 
   static async login(req, res) {
     const encryptToken = await authClient.checkConn(req, res);
-    console.log(encryptToken);
-    const { matricNo, password } = await authClient.decodeLoginToken(encryptToken);
+    if (encryptToken.error) {
+      return res.status(400).json({ error: encryptToken.error });
+    }
+    const decodeLogin = await authClient.decodeLoginToken(encryptToken);
+    if (decodeLogin.error) {
+      return res.status(400).json({ error: decodeLogin.error });
+    }
+    const { matricNo, password } = decodeLogin;
     if (!matricNo) {
       return res.status(400).json({ error: 'Missing Matric Number' });
     }
@@ -179,19 +206,15 @@ class StudentController {
       return res.status(400).json({ error: 'Missing password' });
     }
     try {
-      const userData = {
-        matricNo,
-        password,
-      };
       if (!dbClient.isAlive()) {
         return res.status(500).json({ error: 'Internal Server Error' });
       }
       const user = await Student.findOne({ matricNo });
       if (!user) {
-        return res.status(400).json({ error: 'User not found' });
+        return res.status(400).json({ error: 'MatricNo not linked to any user' });
       }
       if (user.status !== statuses[1]) {
-        return res.status(400).json({ error: 'User not authorized' });
+        return res.status(400).json({ error: 'User not authorized\nPlease activate account' });
       }
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
@@ -199,46 +222,53 @@ class StudentController {
       }
       // set up Token based on the user authentication using this credentials
       const xToken = await authClient.createXToken(user.id);
-      if (!xToken) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+      if (xToken.error) {
+        return res.status(500).json({
+          error: 'Internal Server Error',
+          msg: xToken.error,
+        });
       }
-      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);      
-      res.status(201).json({
+      // const { stdData, dptData, facData, courseData } = await authClient.DashboardData(user);
+      const Dashboard = await user.getDashboardData();
+      if (!Dashboard) {
+        res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
+      return res.status(201).json({
         message: 'Login successful',
         email: user.email,
         xToken,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,
+        Dashboard,
       });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Failed to login' });
+      return res.status(500).json({ error: 'Failed to login' });
     }
   }
 
   static async logout(req, res) {
-    // logout the user
-    // retrive the user token, if not found raise 401
-    const userID = await authClient.checkCurrConn(req, res);
-    const user = await Student.findById(userID);
+    let rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.staus(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const user = await Student.findById(ID);
     if (!user) {
-      res.status(401).json({
+      return res.status(401).json({
         error: 'Unauthorized',
       });
     }
-    // continue with sign-out logic
-    // delete the user token in redis
-    try {
-      await authClient.deleteXToken(token);
-      res.status(201).json({
+    rdfxn = await authClient.deleteXToken(xToken);
+    if (rdfxn.success) {
+      return res.status(201).json({
         message: 'Logout successful',
       });
-    } catch (error) {
-      res.status(500).json({
+    }
+    if (rdfxn.error) {
+      return res.status(500).json({
         status: 'Redis is not alive',
-        error: error.message,
+        error: rdfxn.error,
       });
     }
   }
@@ -247,7 +277,7 @@ class StudentController {
     // check if the email is valid
     const { email, matricNo } = req.body;
     if (!email && !matricNo) {
-      res.status(400).json({
+      return res.status(400).json({
         error: 'Missing email or matricNo',
       });
     }
@@ -256,69 +286,84 @@ class StudentController {
       // Both email and matricNo are provided
       const user = await Student.findOne({ email, matricNo });
       if (!user) {
-        res.status(404).json({
+        return res.status(404).json({
           error: 'User not found',
         });
-        return;
       }
       if (user.status !== statuses[1]) {
-        res.status(400).json({
+        return res.status(400).json({
           error: 'User not authorized',
         });
-        return;
       }
       // Generate and send password reset token
-      const resetToken = await user.forgotPassword();
-      await mailClient.sendToken(user);
-      res.status(201).json({
+      const resetToken = await user.generateOTP();
+      if (!resetToken) {
+        return res.status(500).json({
+          error: 'Internal Server Error',
+        });
+      }
+      try {
+        await mailClient.sendToken(user);
+      } catch (err) {
+        res.status(500).json({
+          error: 'Mail Client Error',
+        });
+      }
+      return res.status(201).json({
         message: 'Password reset token sent successfully',
         email: user.email,
         resetToken,
       });
-    }
-    else if (email) {
+    } if (email) {
       // Only email is provided
       const user = await Student.findOne({ email });
       if (!user) {
-        res.status(404).json({
+        return res.status(404).json({
           error: 'User not found',
         });
-        return;
       }
       if (user.status !== statuses[1]) {
         res.status(400).json({
           error: 'User not authorized',
         });
-        return;
       }
       // Generate and send password reset token
-      const resetToken = await user.forgotPassword();
-      await mailClient.sendToken(user);
-      res.status(201).json({
+      const resetToken = await user.generateOTP();
+      try {
+        await mailClient.sendToken(user);
+      } catch (err) {
+        res.status(500).json({
+          error: 'Mail Client Error',
+        });
+      }
+      return res.status(201).json({
         message: 'Password reset token sent successfully',
         email: user.email,
         resetToken,
       });
-    }
-    else if (matricNo) {
+    } if (matricNo) {
       // Only matricNo is provided
       const user = await Student.findOne({ matricNo });
       if (!user) {
-        res.status(404).json({
+        return res.status(404).json({
           error: 'User not found',
         });
-        return;
       }
       if (user.status !== statuses[1]) {
-        res.status(400).json({
+        return res.status(400).json({
           error: 'User not authorized',
         });
-        return;
       }
       // Generate and send password reset token
-      const resetToken = await user.forgotPassword();
-      await mailClient.sendToken(user);
-      res.status(200).json({
+      const resetToken = await user.generateOTP();
+      try {
+        await mailClient.sendToken(user);
+      } catch (err) {
+        res.status(500).json({
+          error: 'Mail Client Error',
+        });
+      }
+      return res.status(200).json({
         message: 'Password reset token sent',
         email: user.email,
         resetToken,
@@ -332,7 +377,14 @@ class StudentController {
       return res.status(400).json({ error: 'Missing token' });
     }
     const encryptToken = await authClient.checkConn(req, res);
-    const { email, password } = await authClient.decodeActivateProfileToken(encryptToken);
+    if (encryptToken.error) {
+      return res.status(400).json({ error: encryptToken.error });
+    }
+    const authFxn = await authClient.decodeActivateProfileToken(encryptToken);
+    if (authFxn.error) {
+      return res.status(400).json({ error: authFxn.error });
+    }
+    const { email, password } = authFxn;
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
     }
@@ -354,84 +406,92 @@ class StudentController {
       }
       // hash the password using bcrypt
       const hashedPwd = await bcrypt.hash(password, 12);
-      const user = await existingUser.resetPassword(token, hashedPwd);
+      let user = await existingUser.validateOTP(token);
       if (user.error) {
         return res.status(404).json({ error: user.error });
+      }
+      user = await user.changePassword(hashedPwd);
+      if (!user) {
+        return res.status(500).json({ error: 'Internal Server Error' });
       }
       // check if server is up before verifying
       if (!await dbClient.isAlive()) {
         return res.status(500).json({ error: 'Database connection failed' });
       }
-      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(user);
+      const DashBoard = await user.getDashboardData();
+      if (!DashBoard) {
+        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
       // setup basicAuth using token for this object
       const xToken = await authClient.createXToken(user.id);
-      res.status(201).json({
+      return res.status(201).json({
         message: 'Password reset successfully',
         email: user.email,
         xToken,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,
+        DashBoard,
       });
       // needed for the user profile activation
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return res.status(400).json({ error: err });
     }
   }
 
   static async setChangePassword(req, res) {
-    const { userID, xToken } = await authClient.checkCurrConn(req, res);
-    const user = await Student.findById(userID);
-    if (!user) {
-      res.status(401).json({
-        error: 'Unauthorized',
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.staus(401).json({
+        error: rdfxn.error,
       });
+    }
+    const { ID, xToken } = rdfxn;
+    const user = await Student.findById(ID);
+    if (!user) {
+      return res.status(404).json({ error: 'User Object not found' });
     }
     const { email, oldPassword, newPassword } = req.body;
     if (!email) {
-      res.status(400).json({ error: 'Missing email' });
+      return res.status(400).json({ error: 'Missing email' });
     }
     if (!oldPassword) {
-      res.status(400).json({ error: 'Missing old password' });
+      return res.status(400).json({ error: 'Missing old password' });
     }
     if (!newPassword) {
-      res.status(400).json({ error: 'Missing new password' });
+      return res.status(400).json({ error: 'Missing new password' });
     }
     // check if server is up before verifying
     if (!await dbClient.isAlive()) {
-      res.status(500).json({ error: 'Database connection failed' });
+      return res.status(500).json({ error: 'Database connection failed' });
     }
     // check if user object profile is already activated, if true redirect to login instead
     if (user.status !== statuses[1]) {
-      res.status(400).json({ error: 'User not verified\nPlease signin' });
+      return res.status(400).json({ error: 'User not verified\nPlease signin' });
     }
     // compare old password to the hashed password in the database
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      res.status(400).json({ error: 'Invalid old password' });
+      return res.status(400).json({ error: 'Invalid old password' });
     }
     // hash the password using bcrypt
-    const hashedPwd = await bcrypt.hash(newPassword, 12);
+    const hashedPwd = await bcrypt.hash(newPassword, 10);
     try {
       const updatedUser = await user.changePassword(hashedPwd);
       if (updatedUser.error) {
-        res.status(400).json({ error: updatedUser.error });
+        return res.status(400).json({ error: updatedUser.error });
       }
-      const { stdData, dptData, facData, courseData } = await authClient.getDashboardData(updatedUser);
-      res.status(201).json({
+      const DashBoard = await updatedUser.getDashboardData();
+      if (!DashBoard) {
+        return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
+      return res.status(201).json({
         message: 'Password changed successfully',
         email: updatedUser.email,
         xToken,
-        studenData: stdData,
-        deptData: dptData,
-        factultyData: facData,
-        courseData,
+        DashBoard,
       });
     } catch (err) {
-      res.status(400).json({ error: err });
-      }
+      return res.status(400).json({ error: err });
+    }
   }
 }
 

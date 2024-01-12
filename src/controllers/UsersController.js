@@ -35,9 +35,9 @@ class UserController {
         return res.status(400).json({ error: 'User already exists' });
       }
       const user = await User.createUser(userData);
-      res.status(201).json({ id: user._id, email: user.email });
+      return res.status(201).json({ id: user._id, email: user.email });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to create user' });
+      return res.status(500).json({ error: 'Failed to create user' });
     }
   }
 
@@ -56,18 +56,18 @@ class UserController {
       };
       await dbClient.isAlive();
       const user = await User.loginUser(userData);
-      res.status(200).json({
+      return res.status(200).json({
         message: 'Login successful',
         id: user._id,
         email: user.email,
       });
     } catch (err) {
       if (err.message === 'User not found') {
-        res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: 'User not found' });
       } else if (err.message === 'Incorrect password') {
-        res.status(401).json({ error: 'Incorrect password' });
+        return res.status(401).json({ error: 'Incorrect password' });
       } else {
-        res.status(500).json({ error: 'Failed to login' });
+        return res.status(500).json({ error: 'Failed to login' });
       }
     }
   }
@@ -78,9 +78,9 @@ class UserController {
     await dbClient.isAlive();
     try {
       const allUser = await User.find();
-      res.status(200).json({ data: allUser });
+      return res.status(200).json({ data: allUser });
     } catch (err) {
-      res.status(500).json({ error: 'Operation Failed' });
+      return res.status(500).json({ error: 'Operation Failed' });
     }
   }
 }
