@@ -2,9 +2,10 @@
 /* eslint-disable consistent-return */
 /* eslint-disable import/no-extraneous-dependencies */
 // bcrypt for password hashing
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 // import the staff model
-const { enums } = require('../models/base');
+const { enums, privileges, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
 const { Staff } = require('../models/staff');
 
@@ -20,7 +21,15 @@ class StaffController {
     await authClient.isHealth(req, res);
   }
 
-  // signin a new staff
+  /**
+   * Signs in a staff member by generating an activation token and sending it via email.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of the sign-in process.
+   * @throws {Error} If there is an error during the sign-in process.
+   */
   static async signin(req, res) {
     // signup a new student
     const { firstName, email } = req.body;
@@ -69,6 +78,15 @@ class StaffController {
     }
   }
 
+  /**
+ * Activates the staff profile by validating the activation token and updating the password.
+ * @async
+ * @static
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} The result of activating the staff profile.
+ * @throws {Error} If there is an error during the activation process.
+ */
   static async activateProfile(req, res) {
     const { token } = req.body;
     if (!token) {
@@ -131,6 +149,7 @@ class StaffController {
       return res.status(201).json({
         message: 'Account activated successfully',
         email: existingStaff.email,
+        staffId: existingStaff.staffId,
         xToken,
         Dashboard,
       });
@@ -140,8 +159,17 @@ class StaffController {
     }
   }
 
+  /**
+ * Logs in a staff member by validating the login token and checking the password.
+ * @async
+ * @static
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} The result of the login process.
+ * @throws {Error} If there is an error during the login process.
+ */
   static async login(req, res) {
-    const encryptToken = await authClient.checkConn(req, res);
+    const encryptToken = await authClient.checkConn(req);
     if (encryptToken.error) {
       return res.status(400).json({ error: encryptToken.error });
     }
@@ -198,6 +226,15 @@ class StaffController {
     }
   }
 
+  /**
+   * Updates the staff profile based on the provided token and request body.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of updating the staff profile.
+   * @throws {Error} If there is an error during the update process.
+   */
   static async updateProfile(req, res) {
     // verify token passed is linked to an active staff
     // extract the token from the header X-Token
@@ -255,8 +292,17 @@ class StaffController {
     }
   }
 
+  /**
+ * Logs out the staff member by deleting the associated token.
+ * @async
+ * @static
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} The result of the logout process.
+ * @throws {Error} If there is an error during the logout process.
+ */
   static async logout(req, res) {
-    let rdfxn = await authClient.checkCurrConn(req, res);
+    let rdfxn = await authClient.checkCurrConn(req);
     if (rdfxn.error) {
       return res.status(401).json({
         error: rdfxn.error,
@@ -283,6 +329,15 @@ class StaffController {
     }
   }
 
+  /**
+ * Sets the password reset token and sends it to the staff member's email.
+ * @async
+ * @static
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} The result of setting the password reset token.
+ * @throws {Error} If there is an error during the process.
+ */
   static async setResetPassword(req, res) {
     // check if the email is valid
     const { email, staffId } = req.body;
@@ -355,7 +410,7 @@ class StaffController {
       });
     }
     if (staffId) {
-      // Only matricNo is provided
+      // Only staffId is provided
       const staff = await Staff.findOne({ staffId });
       if (!staff) {
         return res.status(404).json({
@@ -385,12 +440,21 @@ class StaffController {
     }
   }
 
+  /**
+   * Sets the new password for the staff member.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of setting the new password.
+   * @throws {Error} If there is an error during the process.
+   */
   static async setNewPassword(req, res) {
     const { token } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Missing token' });
     }
-    const encryptToken = await authClient.checkConn(req, res);
+    const encryptToken = await authClient.checkConn(req);
     if (encryptToken.error) {
       return res.status(400).json({ error: encryptToken.error });
     }
@@ -454,8 +518,17 @@ class StaffController {
     }
   }
 
+  /**
+  * Sets the new password for the staff member.
+  * @async
+  * @static
+  * @param {Object} req - The request object.
+  * @param {Object} res - The response object.
+  * @returns {Promise<Object>} The result of setting the new password.
+  * @throws {Error} If there is an error during the process.
+  */
   static async setChangePassword(req, res) {
-    const rdfxn = await authClient.checkCurrConn(req, res);
+    const rdfxn = await authClient.checkCurrConn(req);
     if (rdfxn.error) {
       return res.status(401).json({
         error: rdfxn.error,
@@ -517,11 +590,10 @@ class StaffController {
   /**
    * Get the staff's dashboard data.
    * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
    * @returns {void}
    */
   static async getDashboardData(req, res) {
-    const rdfxn = await authClient.checkCurrConn(req, res);
+    const rdfxn = await authClient.checkCurrConn(req);
     if (rdfxn.error) {
       return res.status(401).json({
         error: rdfxn.error,
@@ -552,6 +624,580 @@ class StaffController {
     } catch (err) {
       return res.status(400).json({ error: err });
     }
+  }
+
+  /**
+   * Retrieves all objects from the specified collection for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of retrieving all objects.
+   * @throws {Error} If there is an error during the retrieval process.
+   */
+  static async adminGetAll(req, res) {
+    let adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const data = await authClient.staffAttrCheck(req);
+    if (data.error) {
+      return res.status(400).json({ error: data.error });
+    }
+    const typeCollection = data.collection;
+    try {
+      adminFxn = await mongoose.model(typeCollection).find({}).exec();
+      if (adminFxn.error) {
+        return res.status(401).json({
+          error: adminFxn.error,
+        });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: err });
+    }
+    if (!adminFxn) {
+      return res.status(400).json({ error: 'Internal Server Error', msg: 'Failed to get all objects' });
+    }
+    return res.status(200).json({ adminFxn, token });
+  }
+
+  /**
+   * Creates a new object in the specified collection for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of creating a new object.
+   * @throws {Error} If there is an error during the creation process.
+   */
+  static async adminCreateNew(req, res) {
+    // extract the content of the request
+    const data = await authClient.staffAttrCheck(req);
+    if (data.error) {
+      return res.status(400).json({ error: data.error });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    let newObjData;
+    try {
+      newObjData = await staff.createNew(typeCollection, data);
+      if (newObjData.error) {
+        return res.status(400).json({
+          error: newObjData.error,
+        });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: err });
+    }
+    if (!newObjData) {
+      return res.status(400).json({ error: 'Internal Server Error', msg: 'Failed to create new object' });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Object created successfully',
+      xToken: token,
+      operatorData,
+      newObjData,
+    });
+  }
+
+  /**
+   * Updates an object in the specified collection for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of updating an object.
+   * @throws {Error} If there is an error during the update process.
+   */
+  static async adminUpdate(req, res) {
+    // Extract the ID from the request parameters
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    // extract the content of the request
+    const data = await authClient.staffAttrCheck(req);
+    if (data.error) {
+      return res.status(400).json({ error: data.error });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    // ascertain if the tokenToObj matches the given ID
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    let verifyColl;
+    try {
+      verifyColl = await mongoose.model(typeCollection).findById(id).exec();
+      if (!verifyColl) {
+        return res.status(400).json({ error: 'Provided ID does not match to the collection Object', Acesss: 'Forbidden' });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: err, msg: 'Failed to get object' });
+    }
+    const updatedData = await staff.updateExisting(id, typeCollection, data);
+    if (updatedData.error) {
+      return res.status(400).json({
+        error: updatedData.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Object updated successfully',
+      xToken: token,
+      updatedData,
+      operatorData,
+    });
+  }
+
+  /**
+   * Deletes an object in the specified collection for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of deleting an object.
+   * @throws {Error} If there is an error during the deletion process.
+   */
+  static async adminDelete(req, res) {
+    // Extract the ID from the request parameters
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    // extract the content of the request
+    const data = await authClient.staffAttrCheck(req);
+    if (data.error) {
+      return res.status(400).json({ error: data.error });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    // ascertain ID matches the collection object
+    let verifyColl;
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    try {
+      verifyColl = await mongoose.model(typeCollection).findById(id).exec();
+      if (!verifyColl) {
+        return res.status(400).json({ error: 'Provided ID does not match to the collection Object', Acesss: 'Forbidden' });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: err, msg: 'Failed to get object' });
+    }
+    const delData = await staff.deleteExisting(id, data.collection);
+    if (delData.error) {
+      return res.status(400).json({
+        error: delData.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Object deleted successfully',
+      xToken: token,
+      deletedData: delData,
+      operatorData,
+    });
+  }
+
+  /**
+   * Assigns courses to an Lecturer.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of assigning courses.
+   * @throws {Error} If there is an error during the assignment process.
+   */
+  static async adminAssignedCourse(req, res) {
+    // Extract the ID from the request parameters
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    // extract the content of the request
+    const data = req.body;
+    if (!data) {
+      return res.status(400).json({ error: 'Missing data for the request' });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const assignedData = await staff.assignCourses(id, data);
+    if (assignedData.error) {
+      return res.status(400).json({
+        error: assignedData.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Course assigned successfully',
+      xToken: token,
+      assignedData,
+      operatorData,
+    });
+  }
+
+  /**
+   * Approves an object in the specified collection for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of approving an object.
+   * @throws {Error} If there is an error during the approval process.
+   */
+  static async adminApproveRecord(req, res) {
+    // Extract the ID from the request parameters
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const recordUpdate = await staff.approveRecord(id);
+    if (recordUpdate.error) {
+      return res.status(400).json({
+        error: recordUpdate.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Record approved successfully',
+      xToken: token,
+      recordUpdate,
+      operatorData,
+    });
+  }
+
+  /**
+   * Fetches available courses for the specified collection.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of fetching available courses.
+   * @throws {Error} If there is an error during the fetch process.
+   */
+  static async adminGetAvailableCourses(req, res) {
+    // Extract the ID from the request parameters
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    const data = req.body;
+    if (!data) {
+      return res.status(400).json({ error: 'Missing data for the request' });
+    }
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    const validCollectionTypes = ['Department', 'Faculty'];
+    if (!validCollectionTypes.includes(typeCollection)) {
+      return res.status(400).json({
+        error: 'Invalid collection type for the request',
+        msg: 'Only "Department" OR "Faculty" is allowed',
+      });
+    }
+    const { level } = data;
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const availableCourses = await staff.getAvailableCourses(id, typeCollection, level);
+    if (availableCourses.error) {
+      return res.status(400).json({
+        error: availableCourses.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Available courses fetched successfully',
+      xToken: token,
+      availableCourses,
+      operatorData,
+    });
+  }
+
+  /**
+   * Sets available courses for the specified collection.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of setting available courses.
+   * @throws {Error} If there is an error during the set process.
+   */
+  static async adminSetAvailableCourse(req, res) {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    const data = req.body;
+    if (!data) {
+      return res.status(400).json({ error: 'Missing data for the request' });
+    }
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    const validCollectionTypes = ['Department', 'Faculty'];
+    if (!validCollectionTypes.includes(typeCollection)) {
+      return res.status(400).json({
+        error: 'Invalid collection type for the request',
+        msg: 'Only "Department" OR "Faculty" is allowed',
+      });
+    }
+    const arrCourses = data.courses;
+    // ensure arrCourses is an array
+    if (!Array.isArray(arrCourses)) {
+      return res.status(400).json({
+        error: 'Ensure the course is an array of data',
+        msg: 'Ensure the key is defined as \'courses\' and the value is an array []',
+      });
+    }
+    if (!arrCourses.length) {
+      return res.status(400).json({ error: 'No courses provided' });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const setAvailableCourse = await staff.setAvailableCourse(id, typeCollection, arrCourses);
+    if (setAvailableCourse.error) {
+      return res.status(400).json({
+        error: setAvailableCourse.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Available course set successfully',
+      xToken: token,
+      setAvailableCourse,
+      operatorData,
+    });
+  }
+
+  /**
+   * Unsets available courses for the specified collection.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of unsetting available courses.
+   * @throws {Error} If there is an error during the unset process.
+   */
+  static async adminUnSetAvailableCourse(res, req) {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    const data = req.body;
+    if (!data) {
+      return res.status(400).json({ error: 'Missing data for the request' });
+    }
+    const typeCollection = data.collection;
+    if (!typeCollection) {
+      return res.status(400).json({
+        error: 'Missing collection type for the request',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    const validCollectionTypes = ['Department', 'Faculty'];
+    if (!validCollectionTypes.includes(typeCollection)) {
+      return res.status(400).json({
+        error: 'Invalid collection type for the request',
+        msg: 'Only "Department" OR "Faculty" is allowed',
+      });
+    }
+    const arrCourses = data.courses;
+    // ensure arrCourses is an array
+    if (!Array.isArray(arrCourses)) {
+      return res.status(400).json({
+        error: 'Ensure the course is an array of data',
+        msg: 'Ensure the key is defined as \'courses\' and the value is an array []',
+      });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const setAvailableCourse = await staff.unsetAvailableCourses(id, typeCollection, arrCourses);
+    if (setAvailableCourse.error) {
+      return res.status(400).json({
+        error: setAvailableCourse.error,
+      });
+    }
+    const operatorData = await staff.getDashboardData();
+    if (!operatorData) {
+      return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+    }
+    return res.status(200).json({
+      operation: 'Available course set successfully',
+      xToken: token,
+      setAvailableCourse,
+      operatorData,
+    });
+  }
+
+  /**
+ * Retrieves projects based on the provided course array for admin access.
+ * @async
+ * @static
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} The result of retrieving the projects.
+ * @throws {Error} If there is an error during the retrieval process.
+ */
+  static async adminGetProjects(req, res) {
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const arrCourses = req.body;
+    const projects = await staff.getProjects(arrCourses);
+    if (projects.error) {
+      return res.status(400).json({
+        error: projects.error,
+      });
+    }
+    return res.status(200).json({
+      operation: 'Projects fetched successfully',
+      xToken: token,
+      projects,
+    });
+  }
+
+  /**
+   * Grades a project based on the provided ID and data for admin access.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Promise<Object>} The result of grading the project.
+   * @throws {Error} If there is an error during the grading process.
+   */
+  static async adminGradeProject(req, res) {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Missing ID' });
+    }
+    const data = req.body;
+    if (!data) {
+      return res.status(400).json({ error: 'Missing data for the request' });
+    }
+    const adminFxn = await authClient.staffPreCheck(req);
+    if (adminFxn.error) {
+      return res.status(401).json({
+        error: adminFxn.error,
+        msg: 'Staff is not authorized to perform this action',
+      });
+    }
+    const { staff, token } = adminFxn;
+    const gradedProject = await staff.gradeProject(id, data);
+    if (gradedProject.error) {
+      return res.status(400).json({
+        error: gradedProject.error,
+      });
+    }
+    return res.status(200).json({
+      operation: 'Project graded successfully',
+      xToken: token,
+      gradedProject,
+    });
   }
 }
 

@@ -58,5 +58,16 @@ staffRouter.post('/resetpassword', staffController.setResetPassword);
 staffRouter.post('/newpassword', staffController.setNewPassword);
 staffRouter.post('/changepassword', staffController.setChangePassword);
 staffRouter.get('/dashboard', staffController.getDashboardData);
+staffRouter.get('/collection', staffController.adminGetAll);
+staffRouter.post('/create', staffController.adminCreateNew);
+staffRouter.put('/update/:id', staffController.adminUpdate);
+staffRouter.delete('/delete/:id', staffController.adminDelete);
+staffRouter.put('/assigncourse/:id', staffController.adminAssignedCourse);
+staffRouter.put('/approverecord/:id', staffController.adminApproveRecord);
+staffRouter.get('/availablecourses/:id', staffController.adminGetAvailableCourses);
+staffRouter.put('/setavailablecourse', staffController.adminSetAvailableCourse);
+staffRouter.put('/unsetavailablecourse', staffController.adminUnSetAvailableCourse);
+staffRouter.get('/getprojects', staffController.adminGetProjects);
+staffRouter.put('/gradeproject/:id', staffController.adminGradeProject);
 
 module.exports = staffRouter;
