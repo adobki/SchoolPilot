@@ -6,9 +6,7 @@ const bcrypt = require('bcrypt');
 // import the staff model
 const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
-const redisClient = require('../utils/redis');
 const { Staff } = require('../models/staff');
-const { Student } = require('../models/student');
 
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
@@ -508,6 +506,46 @@ class StaffController {
       return res.status(201).json({
         message: 'Password changed successfully',
         email: updatedStaff.email,
+        xToken,
+        DashBoard,
+      });
+    } catch (err) {
+      return res.status(400).json({ error: err });
+    }
+  }
+
+  /**
+   * Get the staff's dashboard data.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {void}
+   */
+  static async getDashboardData(req, res) {
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'Staff Object not found' });
+    }
+    // check if user object profile is already activated, if true, redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'Staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    try {
+      const DashBoard = await staff.getDashboardData();
+      if (!DashBoard) {
+        return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
+      return res.status(201).json({
+        message: 'Dashboard data fetched successfully',
         xToken,
         DashBoard,
       });

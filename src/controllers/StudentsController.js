@@ -9,22 +9,34 @@
 const bcrypt = require('bcrypt');
 // import the user model
 const { Student } = require('../models/student');
-// const { Department } = require('../models/department');
-// const { Faculty } = require('../models/faculty');
 const { enums, ObjectId } = require('../models/base');
 const dbClient = require('../utils/db');
 const { statuses } = enums.students;
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
 
+/**
+ * StudentController class responsible for handling student-related operations.
+ */
 class StudentController {
   // check both redis and db health
+  /**
+   * Check the health status of the server.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {void}
+   */
   static async healthCheck(req, res) {
     // check both redis and db health
     await authClient.isHealth(req, res);
   }
 
-  // signin a new student
+  /**
+   * Sign in a new student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of the sign-in operation.
+   */
   static async signin(req, res) {
     // signup a new student
     const { firstName, email } = req.body;
@@ -73,6 +85,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Activate the user profile using the activation token.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of the profile activation.
+   */
   static async activateProfile(req, res) {
     const { token } = req.body;
     if (!token) {
@@ -144,6 +162,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Update the user profile.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of the profile update.
+   */
   static async updateProfile(req, res) {
     // verify token passed is linked to an active user
     // extract the token from the header X-Token
@@ -201,6 +225,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Login a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of the login operation.
+   */
   static async login(req, res) {
     const encryptToken = await authClient.checkConn(req, res);
     if (encryptToken.error) {
@@ -260,6 +290,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Logout a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of the logout operation.
+   */
   static async logout(req, res) {
     let rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
@@ -288,6 +324,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Set the reset password token for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of setting the reset password token.
+   */
   static async setResetPassword(req, res) {
     // check if the email is valid
     const { email, matricNo } = req.body;
@@ -389,6 +431,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Set a new password for a student using the reset password token.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of setting the new password.
+   */
   static async setNewPassword(req, res) {
     const { token } = req.body;
     if (!token) {
@@ -458,6 +506,12 @@ class StudentController {
     }
   }
 
+  /**
+   * Set a new password for a student using the current password.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of setting the new password.
+   */
   static async setChangePassword(req, res) {
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
@@ -517,6 +571,46 @@ class StudentController {
       return res.status(201).json({
         message: 'Password changed successfully',
         email: updatedUser.email,
+        xToken,
+        DashBoard,
+      });
+    } catch (err) {
+      return res.status(400).json({ error: err });
+    }
+  }
+
+  /**
+   * Get the student's dashboard data.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {void}
+   */
+  static async getDashboardData(req, res) {
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const user = await Student.findById(ID);
+    if (!user) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if user object profile is already activated, if true redirect to login instead
+    if (user.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'User not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    try {
+      const DashBoard = await user.getDashboardData();
+      if (!DashBoard) {
+        return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
+      }
+      return res.status(201).json({
+        message: 'Dashboard data fetched successfully',
         xToken,
         DashBoard,
       });

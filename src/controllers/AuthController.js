@@ -7,7 +7,16 @@ const dbClient = require('../utils/db');
 // token key expiration 24hrs
 const EXP = 60 * 60 * 24;
 
+/**
+ * AuthController class responsible for handling authentication-related operations.
+ */
 class AuthController {
+  /**
+   * Check the health status of the server.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The health status of the server.
+   */
   static async isHealth(req, res) {
     // check both redis and db health
     const dbStatus = await dbClient.isAlive();
@@ -27,6 +36,13 @@ class AuthController {
     });
   }
 
+  /**
+   * Generate health status for multiple portals.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @param {Array} portals - The list of portals to check.
+   * @returns {Object} - The health status of each portal.
+   */
   static async genHealth(req, res, portals) {
     // loop through each url in the list
     const data = [];
@@ -50,6 +66,11 @@ class AuthController {
     return res.status(200).json(data);
   }
 
+  /**
+   * Create a token based on user ID and store it in Redis.
+   * @param {string} userID - The user ID.
+   * @returns {string|Object} - The generated token or an error object.
+   */
   // create token base of user object credentials and store it in redis
   static async createXToken(userID) {
     const token = uuidv4();
@@ -63,6 +84,11 @@ class AuthController {
     }
   }
 
+  /**
+   * Get the user ID associated with the given token from Redis.
+   * @param {string} xToken - The token.
+   * @returns {string|Object} - The user ID or an error object.
+   */
   static async getUserID(xToken) {
     const key = `auth_${xToken}`;
     const userID = await redisClient.get(key);
@@ -72,6 +98,11 @@ class AuthController {
     return userID;
   }
 
+  /**
+   * Delete the token from Redis.
+   * @param {string} xToken - The token to delete.
+   * @returns {Object} - The result of the deletion operation.
+   */
   static async deleteXToken(xToken) {
     try {
       const key = `auth_${xToken}`;
@@ -83,6 +114,12 @@ class AuthController {
     }
   }
 
+  /**
+   * Verify the validity of the given token.
+   * @param {string} xToken - The token to verify.
+   * @returns {boolean} - True if the token is valid, false otherwise.
+   * @throws {Error} - If there is an error verifying the token.
+   */
   static async verifyXToken(xToken) {
     try {
       const userID = await this.getUserID(xToken);
@@ -96,6 +133,12 @@ class AuthController {
     }
   }
 
+  /**
+   * Check the authorization header for basic authentication.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {string|Object} - The encrypted token or an error object.
+   */
   static async checkConn(req, res) {
     // check authorization header
     if (!req.headers.authorization) {
@@ -113,6 +156,12 @@ class AuthController {
     return encryptToken;
   }
 
+  /**
+   * Check the current connection for valid X-Token.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The user ID and X-Token or an error object.
+   */
   static async checkCurrConn(req, res) {
     // retrive the user token, if not found raise 401
     const xToken = req.get('X-Token');
@@ -127,6 +176,11 @@ class AuthController {
     return { ID, xToken };
   }
 
+  /**
+   * Decode the login token to get the matricNo and password.
+   * @param {string} token - The login token.
+   * @returns {Object} - The decoded matricNo and password or an error object.
+   */
   static async decodeLoginToken(token) {
     // decode the token to get the matricNo and password
     const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
@@ -138,6 +192,11 @@ class AuthController {
     return { matricNo, password };
   }
 
+  /**
+   * Decode the staff login token to get the staffId and password.
+   * @param {string} token - The staff login token.
+   * @returns {Object} - The decoded staffId and password or an error object.
+   */
   static async staffDecodeLoginToken(token) {
     // decode the token to get the matricNo and password
     const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));
@@ -149,6 +208,11 @@ class AuthController {
     return { staffId, password };
   }
 
+  /**
+   * Decode the activation profile token to get the email and password.
+   * @param {string} token - The activation profile token.
+   * @returns {Object} - The decoded email and password or an error object.
+   */
   static async decodeActivateProfileToken(token) {
     // decode the token to get the email and password
     const decodedToken = (Buffer.from(token, 'base64').toString().split(':'));

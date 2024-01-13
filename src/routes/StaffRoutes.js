@@ -57,5 +57,6 @@ staffRouter.post('/activateprofile', staffController.activateProfile);
 staffRouter.post('/resetpassword', staffController.setResetPassword);
 staffRouter.post('/newpassword', staffController.setNewPassword);
 staffRouter.post('/changepassword', staffController.setChangePassword);
+staffRouter.get('/dashboard', staffController.getDashboardData);
 
 module.exports = staffRouter;
