@@ -70,5 +70,4 @@ staffRouter.put('/unsetavailablecourse', staffController.adminUnSetAvailableCour
 staffRouter.get('/getprojects', staffController.adminGetProjects);
 staffRouter.put('/gradeproject/:id', staffController.adminGradeProject);
 
-
 module.exports = staffRouter;
