@@ -14,7 +14,12 @@ class MailClient {
 
   async sendToken(obj) {
     try {
-      const url = 'http://localhost:3000/studentportal/activateprofile';
+      let additionalInfo = '';
+      if (obj.role === 'student') {
+        additionalInfo = `<p><strong>Matriculation Number:</strong> ${obj.matricNo}</p>`;
+      } else {
+        additionalInfo = `<p><strong>Staff ID:</strong> ${obj.staffId}</p>`;
+      }
       const info = await this.transporter.sendMail({
         from: 'schoolpilot.mgt@gmail.com',
         to: obj.email,
@@ -23,14 +28,14 @@ class MailClient {
           <p>Dear ${obj.firstName},</p>
           <p>To complete your registration, please use the following activation token:</p>
           <p><strong>Activation Token:</strong> ${obj.resetOTP}</p>
-          <p>click here to activate your profile: <a href="${url}">Activate</a></p>
-          <p>This token is valid for a 5mins. If you did not request this token, please ignore this email.</p>
+          <p><strong>${additionalInfo}</p>
+          <p>Use this token only once. Do not share it with anyone.</p>
+          <p>This token is valid for 5 minutes. If you did not request this token, please ignore this email.</p>
           <p>Thank you for choosing SchoolPilot. If you have any questions, feel free to contact us.</p>
           <p>Best regards,</p>
           <p>The SchoolPilot Team</p>
         `,
       });
-
       console.log('Message sent: %s', info.messageId);
     } catch (error) {
       console.error('Error sending email:', error);

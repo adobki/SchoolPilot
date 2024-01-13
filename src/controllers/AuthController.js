@@ -1,7 +1,11 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable consistent-return */
 const { v4: uuidv4 } = require('uuid');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
+const { Staff } = require('../models/staff');
+
+const models = ['Faculty', 'Department', 'Course', 'Project', 'Record', 'Staff', 'Student', 'Schedule', 'Record'];
 // const { Student } = require('../models/student');
 
 // token key expiration 24hrs
@@ -136,10 +140,9 @@ class AuthController {
   /**
    * Check the authorization header for basic authentication.
    * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
    * @returns {string|Object} - The encrypted token or an error object.
    */
-  static async checkConn(req, res) {
+  static async checkConn(req) {
     // check authorization header
     if (!req.headers.authorization) {
       return { error: 'Basic Authorization header is required' };
@@ -159,10 +162,9 @@ class AuthController {
   /**
    * Check the current connection for valid X-Token.
    * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
    * @returns {Object} - The user ID and X-Token or an error object.
    */
-  static async checkCurrConn(req, res) {
+  static async checkCurrConn(req) {
     // retrive the user token, if not found raise 401
     const xToken = req.get('X-Token');
     if (!xToken) {
@@ -222,6 +224,71 @@ class AuthController {
     const email = decodedToken[0];
     const password = decodedToken[1];
     return ({ email, password });
+  }
+
+  /**
+   * Verifies if the token passed is linked to an active user and
+   *  performs pre-checks for staff authorization.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {string} req.get - The function to retrieve header values.
+   * @returns {Promise<Object>} The result of the staff pre-check.
+   * @throws {Error} If there is an error during the pre-check process.
+   */
+  static async staffPreCheck(req) {
+    // verify token passed is linked to an active user
+    // extract the token from the header X-Token
+    const token = req.get('X-Token');
+    if (!token) {
+      return ({ error: 'Missing X-Token in the Authorization header' });
+    }
+    const staffId = await this.getUserID(token);
+    if (staffId.error) {
+      return ({ error: 'Unauthorized', msg: staffId.error });
+    }
+    // check if server is up before verifying
+    if (!await dbClient.isAlive()) {
+      return ({ error: 'Internal Database Server Error' });
+    }
+    // validate if the token and object from the request are same
+    const staff = await Staff.findById({ _id: staffId });
+    if (!staff) {
+      return ({ error: 'Unauthorized', msg: 'Token is not linked to any staff account' });
+    }
+    return { staff, token };
+  }
+
+  /**
+   * Performs attribute checks on the staff request data.
+   * @async
+   * @static
+   * @param {Object} req - The request object.
+   * @param {Object} req.body - The body of the request.
+   * @returns {Promise<Object>} The result of the attribute checks.
+   * @throws {Error} If there is an error during the attribute checks.
+   */
+  static async staffAttrCheck(req) {
+    const data = req.body;
+    if (!data) {
+      return ({ error: 'Missing data for the request' });
+    }
+    // ensure data is an object type
+    if (typeof data !== 'object') {
+      return ({ error: 'Ensure the request data is an object type (JSON)' });
+    }
+    // check if collection is in model
+    if (!data.collection) {
+      return ({
+        error: 'Missing collection in the request data',
+        msg: 'Ensure the key is defined as \'collection\'',
+      });
+    }
+    // check if collection is not in model
+    if (!models.includes(data.collection)) {
+      return ({ error: 'Invalid collection in the request data' });
+    }
+    return data;
   }
 
   // static async DashboardData(obj) {

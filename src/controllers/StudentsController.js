@@ -153,6 +153,7 @@ class StudentController {
       return res.status(201).json({
         message: 'Account activated successfully',
         email: existingUser.email,
+        matricNo: existingUser.matricNo,
         xToken,
         Dashboard,
       });
