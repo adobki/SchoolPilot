@@ -69,5 +69,9 @@ staffRouter.put('/setavailablecourse', staffController.adminSetAvailableCourse);
 staffRouter.put('/unsetavailablecourse', staffController.adminUnSetAvailableCourse);
 staffRouter.get('/getprojects', staffController.adminGetProjects);
 staffRouter.put('/gradeproject/:id', staffController.adminGradeProject);
+staffRouter.post('/createschedule', staffController.createSchedule);
+staffRouter.post('/updateschedule', staffController.updateSchedule);
+staffRouter.get('/getSchedules', staffController.getSchedules);
+staffRouter.delete('/deleteschedule/:id', staffController.deleteSchedule);
 
 module.exports = staffRouter;
