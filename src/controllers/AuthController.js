@@ -290,7 +290,6 @@ class AuthController {
     }
     return data;
   }
-
   // static async DashboardData(obj) {
   //   const userObj = obj.toObject();
   //   const stdData = {};

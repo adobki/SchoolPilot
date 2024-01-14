@@ -31,13 +31,21 @@ class StaffController {
    * @throws {Error} If there is an error during the sign-in process.
    */
   static async signin(req, res) {
-    // signup a new student
+    // signup a new staff
     const { firstName, email } = req.body;
     if (!firstName) {
-      return res.status(400).json({ error: 'Missing firstname' });
+      return res.status(400).json({
+        error: 'Missing firstname',
+        resolve: 'Please provide your firstname',
+        format: ' { firstName:  <string>, email: <string> }',
+      });
     }
     if (!email) {
-      return res.status(400).json({ error: 'Missing email' });
+      return res.status(400).json({
+        error: 'Missing email',
+        resolve: 'Please provide your email',
+        format: ' { firstName:  <string>, email: <string> }',
+      });
     }
     try {
       if (!await dbClient.isAlive()) {
@@ -179,10 +187,16 @@ class StaffController {
     }
     const { staffId, password } = decodeLogin;
     if (!staffId) {
-      return res.status(400).json({ error: 'Missing Staff ID' });
+      return res.status(400).json({
+        error: 'Missing StaffId',
+        reqFormat: ' { staffId:  <string>, password:  <string> }',
+      });
     }
     if (!password) {
-      return res.status(400).json({ error: 'Missing password' });
+      return res.status(400).json({
+        error: 'Missing passwprd',
+        reqFormat: ' { staffId:  <string>, password:  <string> }',
+      });
     }
     try {
       if (!dbClient.isAlive()) {
@@ -343,7 +357,9 @@ class StaffController {
     const { email, staffId } = req.body;
     if (!email && !staffId) {
       return res.status(400).json({
-        error: 'Missing email or staffId',
+        error: 'Missing email and staffId',
+        resolve: 'Please provide your email and matricNo',
+        reqFormat: ' { email:  <string>, staffId:  <string> }',
       });
     }
     // Code to handle when either email or staffId is provided
@@ -604,7 +620,7 @@ class StaffController {
     if (!staff) {
       return res.status(404).json({ error: 'Staff Object not found' });
     }
-    // check if user object profile is already activated, if true, redirect to login instead
+    // check if staff object profile is already activated, if true, redirect to login instead
     if (staff.status !== statuses[1]) {
       return res.status(400).json({
         error: 'Staff not authorized',
@@ -1197,6 +1213,259 @@ class StaffController {
       operation: 'Project graded successfully',
       xToken: token,
       gradedProject,
+    });
+  }
+
+  static async getSchedules(req, res) {
+    const { startDate, endDate } = req.body;
+    if (!startDate) {
+      return res.status(400).json({
+        error: 'Missing startDate',
+        resolve: 'Please provide a startDate in the request body',
+        format: 'startDate: <string> YYYY-MM-DD',
+        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+      });
+    }
+    if (!endDate) {
+      return res.status(400).json({
+        error: 'Missing endDate',
+        resolve: 'Please provide an endDate in the request body',
+        format: 'endDate: <string> YYYY-MM-DD',
+        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+      });
+    }
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if staff object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'Staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const schedules = await staff.getSchedules(startDate, endDate);
+    if (!schedules) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    return res.status(201).json({
+      message: 'All Schedules fetched successfully',
+      xToken,
+      schedules,
+    });
+  }
+
+  static async getParsedSchedules(req, res) {
+    const { startDate, endDate } = req.body;
+    if (!startDate) {
+      return res.status(400).json({
+        error: 'Missing startDate',
+        resolve: 'Please provide a startDate in the request body',
+        format: 'startDate: <string> YYYY-MM-DD',
+        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+      });
+    }
+    if (!endDate) {
+      return res.status(400).json({
+        error: 'Missing endDate',
+        resolve: 'Please provide an endDate in the request body',
+        format: 'endDate: <string> YYYY-MM-DD',
+        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+      });
+    }
+    if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/) || !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return res.status(400).json({
+        error: 'Invalid time format',
+        format: 'time: <string> YYYY-MM-DD',
+      });
+    }
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if staff object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'User not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const parsedSchedules = await staff.getParsedSchedules(startDate, endDate);
+    if (!parsedSchedules) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    return res.status(201).json({
+      message: 'All Schedules fetched successfully',
+      xToken,
+      parsedSchedules,
+    });
+  }
+
+  static async createSchedule(req, res) {
+    if (!req.body) {
+      return res.status(400).json({
+        error: 'Missing parameters in the request body',
+        mandatoryFormat: '{ title: <string>, time: <string> YYYY-MM-DD, }',
+        genFomat: '{ "title": "string", "time": "YYYY-MM-DD", "description": "string", "color": "string" }',
+        type: 'JSON',
+      });
+    }
+    const { title, time } = req.body;
+    if (!title || !time) {
+      return res.status(400).json({
+        error: 'Missing mandatory parameters',
+        mandatoryFormat: '{ title: <string>, time: <string> YYYY-MM-DD, }',
+        genFomat: '{ "title": "string", "time": "YYYY-MM-DD", "description": "string", "color": "string" }',
+        type: 'JSON',
+      });
+    }
+    const attributes = {
+      title,
+      time,
+    };
+    const optSchema = ['description', 'color'];
+    // loop through the body and only extract the attributes in optSchema
+    optSchema.forEach((attribute) => {
+      if (req.body[attribute]) {
+        attributes[attribute] = req.body[attribute];
+      }
+    });
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if staff object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const createdSchedule = await staff.createSchedule(attributes);
+    if (!createdSchedule) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    if (createdSchedule.error) {
+      return res.status(400).json({ error: createdSchedule.error });
+    }
+    return res.status(201).json({
+      message: 'Schedule created successfully',
+      xToken,
+      createdSchedule,
+    });
+  }
+
+  static async updateSchedule(req, res) {
+    const { scheduleId, attributes } = req.params;
+    if (!scheduleId) {
+      return res.status(400).json({
+        error: 'Missing scheduleId',
+        resolve: 'Please provide a scheduleId in the request params',
+        format: 'scheduleId: <string>',
+        genFormat: '{ scheduleId: <string>, attributes: <JSON> }',
+      });
+    }
+    if (!attributes) {
+      return res.status(400).json({
+        error: 'Missing attributes',
+        resolve: 'Please provide attributes in the request body',
+        format: 'attributes: <JSON>',
+        genFormat: '{ scheduleId: <string>, attributes: <JSON> }',
+      });
+    }
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if staff object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const updatedSchedule = await staff.updateSchedule(scheduleId, attributes);
+    if (!updatedSchedule) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    if (updatedSchedule.error) {
+      return res.status(400).json({ error: updatedSchedule.error });
+    }
+    return res.status(201).json({
+      message: 'Schedule updated successfully',
+      xToken,
+      updatedSchedule,
+    });
+  }
+
+  static async deleteSchedule(req, res) {
+    const { scheduleId } = req.params;
+    if (!scheduleId) {
+      return res.status(400).json({
+        error: 'Missing scheduleId',
+        resolve: 'Please provide a scheduleId in the request params',
+        format: 'scheduleId: <string>',
+        genFormat: '{ scheduleId: <string> }',
+      });
+    }
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'User Object not found' });
+    }
+    // check if staff object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const deletedSchedule = await staff.deleteSchedule(scheduleId);
+    if (deletedSchedule.error) {
+      return res.status(400).json({ error: deletedSchedule.error });
+    }
+    if (!deletedSchedule) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    const msg = `Schedule with scheduleId: ${scheduleId} deleted successfully`;
+    return res.status(201).json({
+      message: msg,
+      xToken,
     });
   }
 }

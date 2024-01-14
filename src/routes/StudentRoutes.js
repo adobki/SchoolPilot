@@ -29,5 +29,17 @@ studentRouter.post('/resetpassword', studentController.setResetPassword);
 studentRouter.post('/newpassword', studentController.setNewPassword);
 studentRouter.post('/changepassword', studentController.setChangePassword);
 studentRouter.get('/dashboard', studentController.getDashboardData);
+studentRouter.get('/availablecourses', studentController.getAvailableCourses);
+studentRouter.get('/unregistercourses', studentController.unRegisterCourses);
+studentRouter.get('/registercourses', studentController.registerCourses);
+studentRouter.get('/getregisteredcourses', studentController.getRegisteredCourses);
+studentRouter.get('/getprojects', studentController.getProjects);
+studentRouter.post('/submitproject', studentController.submitProject);
+studentRouter.get('/getschedules', studentController.getSchedules);
+studentRouter.post('/createschedule', studentController.createSchedule);
+studentRouter.post('/updateschedule', studentController.updateSchedule);
+studentRouter.delete('/deleteschedule/:id', studentController.deleteSchedule);
+studentRouter.get('/getParsedSchedules', studentController.getParsedSchedules);
+studentRouter.get('/getParsedProjects', studentController.getParsedProjects);
 
 module.exports = studentRouter;
