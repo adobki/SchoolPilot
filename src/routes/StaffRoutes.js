@@ -50,7 +50,7 @@ staffRouter.use(cors(corsOptions));
 // get the health check for redis and db connection
 staffRouter.get('/healthcheck', staffController.healthCheck);
 staffRouter.post('/login', staffController.login);
-staffRouter.post('/logout', staffController.logout);
+staffRouter.get('/logout', staffController.logout);
 staffRouter.post('/updateprofile', staffController.updateProfile);
 staffRouter.post('/signin', staffController.signin);
 staffRouter.post('/activateprofile', staffController.activateProfile);

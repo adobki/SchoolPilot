@@ -647,22 +647,6 @@ class StudentController {
    * @throws {Error} If there is an error during the retrieval process.
    */
   static async getAvailableCourses(req, res) {
-    const { semester } = req.body;
-    if (!semester) {
-      return res.status(400).json({
-        error: 'Missing semester',
-        resolve: 'Please provide the semester in the request body',
-        format: 'semester: <type = number>',
-      });
-    }
-    // ensure that the semester is of type number
-    if (typeof semester !== 'number') {
-      return res.status(400).json({
-        error: 'Invalid semester type',
-        resolve: 'The value must be a number',
-        format: 'semester: <type = number>',
-      });
-    }
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -681,17 +665,21 @@ class StudentController {
         resolve: 'Please activate your account',
       });
     }
-    const courses = await student.getAvailableCourses(semester);
-    if (!courses) {
-      return res.status(400).json({ error: 'Internal Server Error fetching courses' });
+    const [sem1, sem2] = [await student.getAvailableCourses(1), await student.getAvailableCourses(2)];
+    if (sem1.error || sem2.error) {
+      return res.status(400).json({
+        message: 'Failed to fetch available courses',
+        resolve: sem1.error || sem2.error,
+      });
     }
-    if (courses.error) {
-      return res.status(400).json({ error: courses.error });
-    }
+    const result = [sem1, sem2].reduce((results, current) => {
+      results.push(...current.faculty.courses, ...current.department.courses);
+      return results;
+    }, []);
     return res.status(201).json({
       message: 'Courses fetched successfully',
       xToken,
-      courses,
+      result,
     });
   }
 
