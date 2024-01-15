@@ -14,7 +14,7 @@ const dbClient = require('../utils/db');
 const { statuses } = enums.students;
 const mailClient = require('../utils/mailer');
 const authClient = require('./AuthController');
-const log = console.log;
+
 /**
  * StudentController class responsible for handling student-related operations.
  */
@@ -674,7 +674,6 @@ class StudentController {
     }
     const result = [sem1, sem2].reduce((results, current) => {
       results.push(...current.faculty.courses, ...current.department.courses);
-      log('here:', results);
       return results;
     }, []);
     return res.status(201).json({
