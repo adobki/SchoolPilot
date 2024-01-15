@@ -1218,22 +1218,22 @@ class StaffController {
 
   static async getSchedules(req, res) {
     const { startDate, endDate } = req.body;
-    if (!startDate) {
-      return res.status(400).json({
-        error: 'Missing startDate',
-        resolve: 'Please provide a startDate in the request body',
-        format: 'startDate: <string> YYYY-MM-DD',
-        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-      });
-    }
-    if (!endDate) {
-      return res.status(400).json({
-        error: 'Missing endDate',
-        resolve: 'Please provide an endDate in the request body',
-        format: 'endDate: <string> YYYY-MM-DD',
-        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-      });
-    }
+    // if (!startDate) {
+    //   return res.status(400).json({
+    //     error: 'Missing startDate',
+    //     resolve: 'Please provide a startDate in the request body',
+    //     format: 'startDate: <string> YYYY-MM-DD',
+    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+    //   });
+    // }
+    // if (!endDate) {
+    //   return res.status(400).json({
+    //     error: 'Missing endDate',
+    //     resolve: 'Please provide an endDate in the request body',
+    //     format: 'endDate: <string> YYYY-MM-DD',
+    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+    //   });
+    // }
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1265,28 +1265,28 @@ class StaffController {
 
   static async getParsedSchedules(req, res) {
     const { startDate, endDate } = req.body;
-    if (!startDate) {
-      return res.status(400).json({
-        error: 'Missing startDate',
-        resolve: 'Please provide a startDate in the request body',
-        format: 'startDate: <string> YYYY-MM-DD',
-        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-      });
-    }
-    if (!endDate) {
-      return res.status(400).json({
-        error: 'Missing endDate',
-        resolve: 'Please provide an endDate in the request body',
-        format: 'endDate: <string> YYYY-MM-DD',
-        genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-      });
-    }
-    if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/) || !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return res.status(400).json({
-        error: 'Invalid time format',
-        format: 'time: <string> YYYY-MM-DD',
-      });
-    }
+    // if (!startDate) {
+    //   return res.status(400).json({
+    //     error: 'Missing startDate',
+    //     resolve: 'Please provide a startDate in the request body',
+    //     format: 'startDate: <string> YYYY-MM-DD',
+    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+    //   });
+    // }
+    // if (!endDate) {
+    //   return res.status(400).json({
+    //     error: 'Missing endDate',
+    //     resolve: 'Please provide an endDate in the request body',
+    //     format: 'endDate: <string> YYYY-MM-DD',
+    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
+    //   });
+    // }
+    // if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/) || !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    //   return res.status(400).json({
+    //     error: 'Invalid time format',
+    //     format: 'time: <string> YYYY-MM-DD',
+    //   });
+    // }
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1301,7 +1301,7 @@ class StaffController {
     // check if staff object profile is already activated, if true redirect to login instead
     if (staff.status !== statuses[1]) {
       return res.status(400).json({
-        error: 'User not authorized',
+        error: 'Staff not authorized',
         resolve: 'Please activate your account',
       });
     }
@@ -1320,7 +1320,7 @@ class StaffController {
     if (!req.body) {
       return res.status(400).json({
         error: 'Missing parameters in the request body',
-        mandatoryFormat: '{ title: <string>, time: <string> YYYY-MM-DD, }',
+        mandatoryFormat: '{ title: <string>, time: <string> Example: YYYY-MM-DD, }',
         genFomat: '{ "title": "string", "time": "YYYY-MM-DD", "description": "string", "color": "string" }',
         type: 'JSON',
       });
@@ -1329,7 +1329,7 @@ class StaffController {
     if (!title || !time) {
       return res.status(400).json({
         error: 'Missing mandatory parameters',
-        mandatoryFormat: '{ title: <string>, time: <string> YYYY-MM-DD, }',
+        mandatoryFormat: '{ title: <string>, time: <string> Example: YYYY-MM-DD, }',
         genFomat: '{ "title": "string", "time": "YYYY-MM-DD", "description": "string", "color": "string" }',
         type: 'JSON',
       });
