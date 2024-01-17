@@ -37,9 +37,9 @@ studentRouter.get('/getprojects', studentController.getProjects);
 studentRouter.post('/submitproject', studentController.submitProject);
 studentRouter.get('/getschedules', studentController.getSchedules);
 studentRouter.post('/createschedule', studentController.createSchedule);
-studentRouter.post('/updateschedule', studentController.updateSchedule);
+studentRouter.put('/updateschedule', studentController.updateSchedule);
 studentRouter.delete('/deleteschedule/:id', studentController.deleteSchedule);
-studentRouter.get('/getParsedSchedules', studentController.getParsedSchedules);
-studentRouter.get('/getParsedProjects', studentController.getParsedProjects);
+studentRouter.get('/getparsedschedules', studentController.getParsedSchedules);
+studentRouter.get('/getparsedprojects', studentController.getParsedProjects);
 
 module.exports = studentRouter;

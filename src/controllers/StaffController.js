@@ -5,7 +5,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 // import the staff model
-const { enums, privileges, ObjectId } = require('../models/base');
+const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
 const { Staff } = require('../models/staff');
 
@@ -142,8 +142,8 @@ class StaffController {
         return res.status(400).json({ error: 'Failed to activate staff profile' });
       }
       // return dashboard data
-      const Dashboard = await staff.getDashboardData();
-      if (!Dashboard) {
+      const dashBoard = await staff.getDashboardData();
+      if (!dashBoard) {
         res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       // setup basicAuth using token for this object
@@ -159,7 +159,7 @@ class StaffController {
         email: existingStaff.email,
         staffId: existingStaff.staffId,
         xToken,
-        Dashboard,
+        dashBoard,
       });
       // needed for the staff profile activation
     } catch (err) {
@@ -224,15 +224,15 @@ class StaffController {
           msg: xToken.error,
         });
       }
-      const Dashboard = await staff.getDashboardData();
-      if (!Dashboard) {
+      const dashBoard = await staff.getDashboardData();
+      if (!dashBoard) {
         res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Login successful',
         email: staff.email,
         xToken,
-        Dashboard,
+        dashBoard,
       });
     } catch (err) {
       console.error(err);
@@ -291,15 +291,15 @@ class StaffController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update staff profile' });
       }
-      const DashBoard = await updatedObj.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await updatedObj.getDashboardData();
+      if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Staff profile updated successfully',
         email: updatedObj.email,
         xToken: token,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(500).json({ error: 'Failed to update staff profile' });
@@ -515,8 +515,8 @@ class StaffController {
       if (!await dbClient.isAlive()) {
         return res.status(500).json({ error: 'Database connection failed' });
       }
-      const DashBoard = await staff.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await staff.getDashboardData();
+      if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       // setup basicAuth using token for this object
@@ -525,7 +525,7 @@ class StaffController {
         message: 'Password reset successfully',
         email: staff.email,
         xToken,
-        DashBoard,
+        dashBoard,
       });
       // needed for the staff profile activation
     } catch (err) {
@@ -588,15 +588,15 @@ class StaffController {
       if (updatedStaff.error) {
         return res.status(400).json({ error: updatedStaff.error });
       }
-      const DashBoard = await updatedStaff.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await updatedStaff.getDashboardData();
+      if (!dashBoard) {
         return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Password changed successfully',
         email: updatedStaff.email,
         xToken,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(400).json({ error: err });
@@ -628,14 +628,14 @@ class StaffController {
       });
     }
     try {
-      const DashBoard = await staff.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await staff.getDashboardData();
+      if (!dashBoard) {
         return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Dashboard data fetched successfully',
         xToken,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(400).json({ error: err });
@@ -1217,23 +1217,7 @@ class StaffController {
   }
 
   static async getSchedules(req, res) {
-    const { startDate, endDate } = req.body;
-    // if (!startDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing startDate',
-    //     resolve: 'Please provide a startDate in the request body',
-    //     format: 'startDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!endDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing endDate',
-    //     resolve: 'Please provide an endDate in the request body',
-    //     format: 'endDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
+    const { startDate, endDate } = req.query;
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1256,6 +1240,9 @@ class StaffController {
     if (!schedules) {
       return res.status(400).json({ error: 'Operation failed' });
     }
+    if (schedules.error) {
+      return res.status(400).json({ error: schedules.error });
+    }
     return res.status(201).json({
       message: 'All Schedules fetched successfully',
       xToken,
@@ -1264,29 +1251,7 @@ class StaffController {
   }
 
   static async getParsedSchedules(req, res) {
-    const { startDate, endDate } = req.body;
-    // if (!startDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing startDate',
-    //     resolve: 'Please provide a startDate in the request body',
-    //     format: 'startDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!endDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing endDate',
-    //     resolve: 'Please provide an endDate in the request body',
-    //     format: 'endDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/) || !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    //   return res.status(400).json({
-    //     error: 'Invalid time format',
-    //     format: 'time: <string> YYYY-MM-DD',
-    //   });
-    // }
+    const { startDate, endDate } = req.query;
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1308,6 +1273,9 @@ class StaffController {
     const parsedSchedules = await staff.getParsedSchedules(startDate, endDate);
     if (!parsedSchedules) {
       return res.status(400).json({ error: 'Operation failed' });
+    }
+    if (parsedSchedules.error) {
+      return res.status(400).json({ error: parsedSchedules.error });
     }
     return res.status(201).json({
       message: 'All Schedules fetched successfully',
@@ -1378,7 +1346,7 @@ class StaffController {
   }
 
   static async updateSchedule(req, res) {
-    const { scheduleId, attributes } = req.params;
+    const { scheduleId, attributes } = req.body;
     if (!scheduleId) {
       return res.status(400).json({
         error: 'Missing scheduleId',
@@ -1428,13 +1396,13 @@ class StaffController {
   }
 
   static async deleteSchedule(req, res) {
-    const { scheduleId } = req.params;
-    if (!scheduleId) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({
         error: 'Missing scheduleId',
         resolve: 'Please provide a scheduleId in the request params',
-        format: 'scheduleId: <string>',
-        genFormat: '{ scheduleId: <string> }',
+        format: 'id: <string>',
+        genFormat: '{ id: <string> }',
       });
     }
     const rdfxn = await authClient.checkCurrConn(req, res);
@@ -1455,17 +1423,50 @@ class StaffController {
         resolve: 'Please activate your account',
       });
     }
-    const deletedSchedule = await staff.deleteSchedule(scheduleId);
+    const deletedSchedule = await staff.deleteSchedule(id);
     if (deletedSchedule.error) {
       return res.status(400).json({ error: deletedSchedule.error });
     }
     if (!deletedSchedule) {
       return res.status(400).json({ error: 'Operation failed' });
     }
-    const msg = `Schedule with scheduleId: ${scheduleId} deleted successfully`;
+    const msg = `Schedule with scheduleId: ${id} deleted successfully`;
     return res.status(201).json({
       message: msg,
       xToken,
+    });
+  }
+
+  static async getParsedProjects(req, res) {
+    const rdfxn = await authClient.checkCurrConn(req, res);
+    if (rdfxn.error) {
+      return res.status(401).json({
+        error: rdfxn.error,
+      });
+    }
+    const { ID, xToken } = rdfxn;
+    const staff = await Staff.findById(ID);
+    if (!staff) {
+      return res.status(404).json({ error: 'Staff Object not found' });
+    }
+    // check if student object profile is already activated, if true redirect to login instead
+    if (staff.status !== statuses[1]) {
+      return res.status(400).json({
+        error: 'Staff not authorized',
+        resolve: 'Please activate your account',
+      });
+    }
+    const projects = await staff.getParsedProjects();
+    if (!projects) {
+      return res.status(400).json({ error: 'Operation failed' });
+    }
+    if (projects.error) {
+      return res.status(400).json({ error: projects.error });
+    }
+    return res.status(201).json({
+      message: 'Projects fetched successfully',
+      xToken,
+      projects,
     });
   }
 }

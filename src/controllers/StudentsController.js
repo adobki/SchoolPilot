@@ -9,7 +9,7 @@
 const bcrypt = require('bcrypt');
 // import the student model
 const { Student } = require('../models/student');
-const { enums, ObjectId } = require('../models/base');
+const { enums } = require('../models/base');
 const dbClient = require('../utils/db');
 const { statuses } = enums.students;
 const mailClient = require('../utils/mailer');
@@ -146,8 +146,8 @@ class StudentController {
         return res.status(400).json({ error: 'Failed to activate student profile' });
       }
       // return dashboard data
-      const Dashboard = await student.getDashboardData();
-      if (!Dashboard) {
+      const dashBoard = await student.getDashboardData();
+      if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       // setup basicAuth using token for this object
@@ -163,7 +163,7 @@ class StudentController {
         email: existingUser.email,
         matricNo: existingUser.matricNo,
         xToken,
-        Dashboard,
+        dashBoard,
       });
       // needed for the student profile activation
     } catch (err) {
@@ -219,15 +219,15 @@ class StudentController {
       if (!updatedObj) {
         return res.status(400).json({ error: 'Failed to update student profile' });
       }
-      const DashBoard = await updatedObj.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await updatedObj.getDashboardData();
+      if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'User profile updated successfully',
         email: updatedObj.email,
         xToken,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(500).json({ error: 'Failed to update student profile' });
@@ -291,16 +291,16 @@ class StudentController {
           msg: xToken.error,
         });
       }
-      // const { stdData, dptData, facData, courseData } = await authClient.DashboardData(student);
-      const Dashboard = await student.getDashboardData();
-      if (!Dashboard) {
-        return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
+      // const { stdData, dptData, facData, courseData } = await authClient.DashBoardData(student);
+      const dashBoard = await student.getDashBoardData();
+      if (!dashBoard) {
+        return res.status(500).json({ error: 'Internal Server Error fetching dashBoard' });
       }
       return res.status(201).json({
         message: 'Login successful',
         email: student.email,
         xToken,
-        Dashboard,
+        dashBoard,
       });
     } catch (err) {
       console.error(err);
@@ -507,8 +507,8 @@ class StudentController {
       if (!await dbClient.isAlive()) {
         return res.status(500).json({ error: 'Database connection failed' });
       }
-      const DashBoard = await student.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await student.getDashboardData();
+      if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       // setup basicAuth using token for this object
@@ -517,7 +517,7 @@ class StudentController {
         message: 'Password reset successfully',
         email: student.email,
         xToken,
-        DashBoard,
+        dashBoard,
       });
       // needed for the student profile activation
     } catch (err) {
@@ -527,7 +527,7 @@ class StudentController {
   }
 
   /**
-   * Set a new password for a student using the current password.
+   * Change the password for a student using the current password.
    * @param {Object} req - The request object.
    * @param {Object} res - The response object.
    * @returns {Object} - The result of setting the new password.
@@ -582,15 +582,15 @@ class StudentController {
       if (updatedUser.error) {
         return res.status(400).json({ error: updatedUser.error });
       }
-      const DashBoard = await updatedUser.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await updatedUser.getDashboardData();
+      if (!dashBoard) {
         return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Password changed successfully',
         email: updatedUser.email,
         xToken,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(400).json({ error: err });
@@ -623,14 +623,14 @@ class StudentController {
       });
     }
     try {
-      const DashBoard = await student.getDashboardData();
-      if (!DashBoard) {
+      const dashBoard = await student.getDashboardData();
+      if (!dashBoard) {
         return res.status(400).json({ error: 'Internal Server Error fetching Dashboard' });
       }
       return res.status(201).json({
         message: 'Dashboard data fetched successfully',
         xToken,
-        DashBoard,
+        dashBoard,
       });
     } catch (err) {
       return res.status(400).json({ error: err });
@@ -672,6 +672,9 @@ class StudentController {
         resolve: sem1.error || sem2.error,
       });
     }
+    if (!sem1 || !sem2) {
+      return res.status(400).json({ error: 'Internal Server Error fetching available courses' });
+    }
     const result = [sem1, sem2].reduce((results, current) => {
       results.push(...current.faculty.courses, ...current.department.courses);
       return results;
@@ -684,7 +687,7 @@ class StudentController {
   }
 
   /**
-   * Retrieves the unRegistereda vailable courses for a student in the specific semester.
+   * Retrieves the unRegistereda avilable courses for a student in the specific semester.
    * @async
    * @static
    * @param {Object} req - The request object.
@@ -743,6 +746,17 @@ class StudentController {
     });
   }
 
+  /**
+   * Registers courses for a student.
+   *
+   * This method handles the registration of courses for a student. It validates the input,
+   * checks the student's authorization status, and registers the courses if all conditions are met.
+   * It returns the registration status and the student's dashboard data.
+   *
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The response object containing the registration status and dashboard data.
+   */
   static async registerCourses(req, res) {
     const { semester, coursesId } = req.body;
     if (!coursesId) {
@@ -809,10 +823,16 @@ class StudentController {
     return res.status(201).json({
       message: 'Courses registered successfully',
       xToken,
-      DashBoard: dashBoard,
+      dashBoard,
     });
   }
 
+  /**
+   * Get all registered courses for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of getting all registered courses.
+   */
   static async getRegisteredCourses(req, res) {
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
@@ -843,6 +863,12 @@ class StudentController {
     });
   }
 
+  /**
+   * Get all projects for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of getting all projects.
+   */
   static async getProjects(req, res) {
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
@@ -873,6 +899,12 @@ class StudentController {
     });
   }
 
+  /**
+   * Submit a project for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of submitting a project.
+   */
   static async submitProject(req, res) {
     const { projectId, answer } = req.body;
     if (!projectId) {
@@ -926,24 +958,14 @@ class StudentController {
     });
   }
 
+  /**
+   * Get all schedules for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of getting all schedules.
+   */
   static async getSchedules(req, res) {
-    const { startDate, endDate } = req.body;
-    // if (!startDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing startDate',
-    //     resolve: 'Please provide a startDate in the request body',
-    //     format: 'startDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!endDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing endDate',
-    //     resolve: 'Please provide an endDate in the request body',
-    //     format: 'endDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
+    const { startDate, endDate } = req.query;
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -966,6 +988,9 @@ class StudentController {
     if (!schedules) {
       return res.status(400).json({ error: 'Operation failed' });
     }
+    if (schedules.error) {
+      return res.status(400).json({ error: schedules.error });
+    }
     return res.status(201).json({
       message: 'All Schedules fetched successfully',
       xToken,
@@ -973,30 +998,14 @@ class StudentController {
     });
   }
 
+  /**
+   * Get all parsed schedules for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of getting all parsed schedules.
+   */
   static async getParsedSchedules(req, res) {
-    const { startDate, endDate } = req.body;
-    // if (!startDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing startDate',
-    //     resolve: 'Please provide a startDate in the request body',
-    //     format: 'startDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!endDate) {
-    //   return res.status(400).json({
-    //     error: 'Missing endDate',
-    //     resolve: 'Please provide an endDate in the request body',
-    //     format: 'endDate: <string> YYYY-MM-DD',
-    //     genFormat: '{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }',
-    //   });
-    // }
-    // if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/) || !endDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    //   return res.status(400).json({
-    //     error: 'Invalid time format',
-    //     format: 'time: <string> YYYY-MM-DD',
-    //   });
-    // }
+    const { startDate, endDate } = req.query;
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1019,6 +1028,9 @@ class StudentController {
     if (!parsedSchedules) {
       return res.status(400).json({ error: 'Operation failed' });
     }
+    if (parsedSchedules.error) {
+      return res.status(400).json({ error: parsedSchedules.error });
+    }
     return res.status(201).json({
       message: 'All Schedules fetched successfully',
       xToken,
@@ -1026,6 +1038,12 @@ class StudentController {
     });
   }
 
+  /**
+   * Create a new schedule for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of creating a new schedule.
+   */
   static async createSchedule(req, res) {
     if (!req.body) {
       return res.status(400).json({
@@ -1055,13 +1073,6 @@ class StudentController {
         attributes[attribute] = req.body[attribute];
       }
     });
-    // check if the time is in the correct format
-    // if (!time.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    //   return res.status(400).json({
-    //     error: 'Invalid time format',
-    //     format: 'time: <string> YYYY-MM-DD',
-    //   });
-    // }
     const rdfxn = await authClient.checkCurrConn(req, res);
     if (rdfxn.error) {
       return res.status(401).json({
@@ -1094,8 +1105,14 @@ class StudentController {
     });
   }
 
+  /**
+   * Update a schedule for a student.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of updating a schedule.
+   */
   static async updateSchedule(req, res) {
-    const { scheduleId, attributes } = req.params;
+    const { scheduleId, attributes } = req.body;
     if (!scheduleId) {
       return res.status(400).json({
         error: 'Missing scheduleId',
@@ -1144,14 +1161,20 @@ class StudentController {
     });
   }
 
+  /**
+   * Delete a schedule for a student base on the scheduleId.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   * @returns {Object} - The result of deleting a schedule.
+   */
   static async deleteSchedule(req, res) {
-    const { scheduleId } = req.params;
-    if (!scheduleId) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({
         error: 'Missing scheduleId',
         resolve: 'Please provide a scheduleId in the request params',
-        format: 'scheduleId: <string>',
-        genFormat: '{ scheduleId: <string> }',
+        format: 'id: <string>',
+        genFormat: '{ id: <string> }',
       });
     }
     const rdfxn = await authClient.checkCurrConn(req, res);
@@ -1172,14 +1195,14 @@ class StudentController {
         resolve: 'Please activate your account',
       });
     }
-    const deletedSchedule = await student.deleteSchedule(scheduleId);
+    const deletedSchedule = await student.deleteSchedule(id);
     if (deletedSchedule.error) {
       return res.status(400).json({ error: deletedSchedule.error });
     }
     if (!deletedSchedule) {
       return res.status(400).json({ error: 'Operation failed' });
     }
-    const msg = `Schedule with scheduleId: ${scheduleId} deleted successfully`;
+    const msg = `Schedule with scheduleId: ${id} deleted successfully`;
     return res.status(201).json({
       message: msg,
       xToken,
@@ -1196,7 +1219,7 @@ class StudentController {
     const { ID, xToken } = rdfxn;
     const student = await Student.findById(ID);
     if (!student) {
-      return res.status(404).json({ error: 'User Object not found' });
+      return res.status(404).json({ error: 'Student Object not found' });
     }
     // check if student object profile is already activated, if true redirect to login instead
     if (student.status !== statuses[1]) {
@@ -1208,6 +1231,9 @@ class StudentController {
     const projects = await student.getParsedProjects();
     if (!projects) {
       return res.status(400).json({ error: 'Operation failed' });
+    }
+    if (projects.error) {
+      return res.status(400).json({ error: projects.error });
     }
     return res.status(201).json({
       message: 'Projects fetched successfully',
