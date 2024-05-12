@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+require('dotenv').config(); // eslint-disable-line
 
 const uri = process.env.MONGODB_URL;
+
 
 class DBClient {
   constructor() {
@@ -22,10 +24,13 @@ class DBClient {
 
   async isAlive() {
     // Check if the Mongoose connection state is open
-    if (await this.client) {
-      return true;
-    }
-    return false;
+    return !!(await this.client);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async close() {
+    await mongoose.disconnect();
+    console.log('Connection to MongoDB has been disconnected!');
   }
 }
 

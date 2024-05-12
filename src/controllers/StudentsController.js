@@ -33,8 +33,8 @@ class StudentController {
 
   /**
    * Sign in a new student.
-   * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
+   * @param {import("express").request} req - The request object.
+   * @param {import("express").response} res - The response object.
    * @returns {Object} - The result of the sign-in operation.
    */
   static async signin(req, res) {
@@ -84,11 +84,12 @@ class StudentController {
       // send mail to the student object base on the token
       await mailClient.sendToken(existingUser);
       return res.status(201).json({
-        message: 'Activaton token sent successfully',
+        message: 'Activation token sent successfully',
         email: existingUser.email,
         activationToken: token,
       });
     } catch (err) {
+      console.error("error:", err);
       return res.status(500).json({ error: 'Failed to signup student account' });
     }
   }
@@ -173,7 +174,7 @@ class StudentController {
 
   /**
    * Update the student profile.
-   * @param {Object} req - The request object.
+   * @param {import("express").request} req - The request object.
    * @param {Object} res - The response object.
    * @returns {Object} - The result of the profile update.
    */
@@ -189,6 +190,7 @@ class StudentController {
     // get the student id from the redis client
     const studentID = await authClient.getUserID(xToken);
     if (studentID.error) {
+      console.log()
       return res.status(401).json({
         error: 'Unauthorized',
         msg: studentID.error,
@@ -241,6 +243,7 @@ class StudentController {
    * @returns {Object} - The result of the login operation.
    */
   static async login(req, res) {
+    console.log("hello");
     const encryptToken = await authClient.checkConn(req, res);
     if (encryptToken.error) {
       return res.status(400).json({ error: encryptToken.error });
@@ -292,10 +295,11 @@ class StudentController {
         });
       }
       // const { stdData, dptData, facData, courseData } = await authClient.DashBoardData(student);
-      const dashBoard = await student.getDashBoardData();
+      const dashBoard = await student.getDashboardData();
       if (!dashBoard) {
         return res.status(500).json({ error: 'Internal Server Error fetching dashBoard' });
       }
+      console.log('dashboard', dashBoard);
       return res.status(201).json({
         message: 'Login successful',
         email: student.email,

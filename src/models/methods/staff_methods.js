@@ -8,7 +8,7 @@ const { statuses, levels } = enums.courses;
 
 /**
  * Class method for creating a new object/document in the database. All types require a specific
- * priviledge to create them, except `Project` and `Record`, which require that the associated
+ * privilege to create them, except `Project` and `Record`, which require that the associated
  * course must be assigned to the staff. Therefore, only the lecturer(s) for a specific course
  * can post students' results and projects for same, and only admins can create the other types.
  * @param {String} type `Project`|`Record`|`Course`|`Student`|`Staff`|`Department`|`Faculty`.
