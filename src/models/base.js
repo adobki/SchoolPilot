@@ -89,7 +89,7 @@ const personPrivateAttr = {
 const staffPrivateAttr = { ...personPrivateAttr, privileges: 0, assignedCourses: 0 };
 const studentPrivateAttr = { ...personPrivateAttr, registeredCourses: 0 };
 
-// Concatenated version of private attribues for use in Mongoose project() method
+// Concatenated version of private attributes for use in Mongoose project() method
 const allPrivateAttrStr = ['', ...Object.keys(allPrivateAttr)].join(' -').trim();
 const departmentPrivateAttrStr = ['', ...Object.keys(departmentAttr)].join(' -').trim();
 const personPrivateAttrStr = ['', ...Object.keys(personPrivateAttr)].join(' -').trim();

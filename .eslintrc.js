@@ -32,11 +32,11 @@ module.exports = {
     'no-param-reassign': 'off',
     'newline-per-chained-call': 'off',
     'object-curly-newline': 'off',
-},
-  overrides:[
+  },
+  overrides: [
     {
       files: ['*.js'],
       excludedFiles: 'babel.config.js',
-    }
-  ]
+    },
+  ],
 };
